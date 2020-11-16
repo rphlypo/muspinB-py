@@ -11,24 +11,18 @@ xlib.XInitThreads()
 win = visual.Window(monitor=mon, size=mon.getSizePix(), units='deg', screen=1, fullscr=True)
 kb = keyboard.Keyboard()
 
-print(mon.getSizePix()[0])
-print(mon.getDistance()*12*0.017455)
-print(cm2pix(deg2cm(12, mon, correctFlat=False), mon))
-print('ok?')
-
-
 params = dict(win=win,
               tex='sqr',
               mask='circle',
               opacity=.5,
               blendmode='add',
-              sf=2/3,
+              sf=1/3,
               size=12, #deg2pix(6, mon),
               units='deg',
               pos=(0,0),
               phase=0,
-              contrast=.35,
-              texRes=512)
+              contrast=.3,
+              texRes=1024)
 
 stim1 = visual.GratingStim(ori=30, **params)
 stim1.setAutoDraw(True)
@@ -36,23 +30,24 @@ stim1.setAutoDraw(True)
 stim2 = visual.GratingStim(ori=-30, **params)
 stim2.setAutoDraw(True)
 
+circ = visual.Circle(win, size=1.25, lineWidth=0, lineColor=win.color, fillColor=win.color, autoDraw=True)
+circ = visual.Circle(win, size=2, units='pix', lineWidth=0, lineColor="red", fillColor="red", autoDraw=True)
+
 speed = 1  # deg per second
 
-timer = clock.CountdownTimer(start=3)
-now = timer.getTime()
+timer = clock.CountdownTimer(start=20)
 kb.clock.reset()  # when you want to start the timer from
+now = timer.getTime()
+start_time = now
 
-stim1.draw()
-stim2.draw()
-# msg.draw()
 keycode = {'right': 1, 'up': 2, 'left':4}
 current_keys = 0
 new_keys = 0
 
 while timer.getTime() > 0:
-    lastTime, now = now, timer.getTime()
-    stim1.phase -= speed * (lastTime - now)
-    stim2.phase += speed * (lastTime - now)
+    now = timer.getTime()
+    stim1.phase = speed * (now - start_time)
+    stim2.phase = -speed * (now - start_time)
     win.flip()
 
     # key presses
