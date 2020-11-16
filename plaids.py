@@ -11,7 +11,7 @@ xlib.XInitThreads()
 win = visual.Window(monitor=mon, size=mon.getSizePix(), units='deg', screen=1, fullscr=True)
 kb = keyboard.Keyboard()
 
-print()
+print(mon.getSizePix()[0])
 print(mon.getDistance()*12*0.017455)
 print(cm2pix(deg2cm(12, mon, correctFlat=False), mon))
 print('ok?')
@@ -22,9 +22,9 @@ params = dict(win=win,
               mask='circle',
               opacity=.5,
               blendmode='add',
-              sf=1/deg2pix(3/2, mon),
-              size=200, #deg2pix(6, mon),
-              units='pix',
+              sf=2/3,
+              size=12, #deg2pix(6, mon),
+              units='deg',
               pos=(0,0),
               phase=0,
               contrast=.35,
