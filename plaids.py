@@ -8,26 +8,28 @@ import ctypes
 xlib = ctypes.cdll.LoadLibrary("libX11.so")
 xlib.XInitThreads()
 
-win = visual.Window(monitor=mon, size=mon.getSizePix(), units='deg', screen=1, fullscr=True)
+win = visual.Window(monitor=mon, color=[-0.3]*3, size=mon.getSizePix(), units='deg', screen=1, fullscr=True)
 kb = keyboard.Keyboard()
 
 params = dict(win=win,
               tex='sqr',
               mask='circle',
-              opacity=.5,
+              color=win.color,
               blendmode='add',
               sf=1/3,
               size=12, #deg2pix(6, mon),
               units='deg',
               pos=(0,0),
               phase=0,
-              contrast=.3,
+              contrast=1.2,
               texRes=1024)
 
-stim1 = visual.GratingStim(ori=30, **params)
+alpha = .5
+
+stim1 = visual.GratingStim(ori=30, opacity=alpha, **params)
 stim1.setAutoDraw(True)
 
-stim2 = visual.GratingStim(ori=-30, **params)
+stim2 = visual.GratingStim(ori=-30, opacity=1-alpha, **params)
 stim2.setAutoDraw(True)
 
 circ = visual.Circle(win, size=1.25, lineWidth=0, lineColor=win.color, fillColor=win.color, autoDraw=True)
@@ -46,7 +48,7 @@ new_keys = 0
 
 while timer.getTime() > 0:
     now = timer.getTime()
-    stim1.phase = speed * (now - start_time)
+    stim1.phase = speed * (now - start_time)  # phase is modulo 1 !!
     stim2.phase = -speed * (now - start_time)
     win.flip()
 
