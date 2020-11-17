@@ -1,4 +1,5 @@
 from expsetup import win
+from psychopy import visual
 
 plaid_params = dict(win=win,
                     tex='sqr65',
@@ -29,5 +30,5 @@ plaid = dict( Amb=createPlaids(0.5, **plaid_params),
               transpR=createPlaids(0.9, **plaid_params),
               coh=createPlaids([1, .7], **plaid_params))
 
-circ = visual.Circle(win, size=2.25, lineWidth=0, lineColor=win.color, fillColor=win.color, autoDraw=False)
+circle = visual.Circle(win, size=2.25, lineWidth=0, lineColor=win.color, fillColor=win.color, autoDraw=False)
 fix_point = visual.Circle(win, size=2, units='pix', lineWidth=0, lineColor="red", fillColor="red", autoDraw=False)
