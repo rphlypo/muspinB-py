@@ -1,6 +1,9 @@
 import ctypes
-xlib = ctypes.cdll.LoadLibrary("libX11.so")
-xlib.XInitThreads()
+try:
+    xlib = ctypes.cdll.LoadLibrary("libX11.so")
+    xlib.XInitThreads()
+except OSError:
+    pass
 
 from psychopy import monitors, visual
 from psychopy.hardware import keyboard
