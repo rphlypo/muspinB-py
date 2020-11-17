@@ -1,9 +1,11 @@
 from psychopy import visual, core, clock
-from expsetup import win, kb, plaid
+from expsetup import win, kb
+from stims import circle, fix_point, plaid
 
 stim1, stim2 = plaid['Amb']
-stim1.setAutoDraw(True)
-stim2.setAutoDraw(True)
+current_stims = (stim1, stim2, circle, fix_point)
+for s in current_stims:
+    s.autoDraw = True
 
 speed = 1  # pixels per second
 
@@ -11,10 +13,6 @@ timer = clock.CountdownTimer(start=1)
 now = start_time = timer.getTime()
 kb.clock.reset()  # when you want to start the timer
 
-stim1.autoDraw = True
-stim2.autoDraw = True
-circ = visual.Circle(win, size=2.25, lineWidth=0, lineColor=win.color, fillColor=win.color, autoDraw=True)
-circ = visual.Circle(win, size=2, units='pix', lineWidth=0, lineColor="red", fillColor="red", autoDraw=True)
 
 keycode = {'right': 1, 'up': 2, 'left':4}
 current_keys = 0
@@ -40,6 +38,7 @@ while timer.getTime() > 0:
         current_keys = new_keys
         print('{:03b}'.format(current_keys))
     
-
+for s in current_stims:
+    s.autoDraw = False
 
 win.close()
