@@ -1,46 +1,20 @@
 from psychopy import visual, core, clock
-from psychopy.hardware import keyboard
-from psychopy.tools.monitorunittools import deg2pix, deg2cm, cm2pix
-from expsetup import mon  # , deg2pix, pix2deg
-from numpy import array
+from expsetup import win, kb, plaid
 
-import ctypes
-xlib = ctypes.cdll.LoadLibrary("libX11.so")
-xlib.XInitThreads()
-
-win = visual.Window(monitor=mon, color=[-0.3]*3, size=mon.getSizePix(), units='deg', screen=1, fullscr=True)
-kb = keyboard.Keyboard()
-
-params = dict(win=win,
-              tex='sqr',
-              mask='circle',
-              color=win.color,
-              blendmode='add',
-              sf=1/3,
-              size=12, #deg2pix(6, mon),
-              units='deg',
-              pos=(0,0),
-              phase=0,
-              contrast=1.2,
-              texRes=1024)
-
-alpha = .5
-
-stim1 = visual.GratingStim(ori=30, opacity=alpha, **params)
+stim1, stim2 = plaid['Amb']
 stim1.setAutoDraw(True)
-
-stim2 = visual.GratingStim(ori=-30, opacity=1-alpha, **params)
 stim2.setAutoDraw(True)
 
-circ = visual.Circle(win, size=1.25, lineWidth=0, lineColor=win.color, fillColor=win.color, autoDraw=True)
+speed = 1  # pixels per second
+
+timer = clock.CountdownTimer(start=1)
+now = start_time = timer.getTime()
+kb.clock.reset()  # when you want to start the timer
+
+stim1.autoDraw = True
+stim2.autoDraw = True
+circ = visual.Circle(win, size=2.25, lineWidth=0, lineColor=win.color, fillColor=win.color, autoDraw=True)
 circ = visual.Circle(win, size=2, units='pix', lineWidth=0, lineColor="red", fillColor="red", autoDraw=True)
-
-speed = 1  # deg per second
-
-timer = clock.CountdownTimer(start=20)
-kb.clock.reset()  # when you want to start the timer from
-now = timer.getTime()
-start_time = now
 
 keycode = {'right': 1, 'up': 2, 'left':4}
 current_keys = 0
@@ -48,8 +22,8 @@ new_keys = 0
 
 while timer.getTime() > 0:
     now = timer.getTime()
-    stim1.phase = speed * (now - start_time)  # phase is modulo 1 !!
-    stim2.phase = -speed * (now - start_time)
+    stim1.phase = (speed * (now - start_time)) % 1
+    stim2.phase = (-speed * (now - start_time)) % 1
     win.flip()
 
     # key presses
@@ -66,4 +40,6 @@ while timer.getTime() > 0:
         current_keys = new_keys
         print('{:03b}'.format(current_keys))
     
+
+
 win.close()
