@@ -6,4 +6,4 @@
 - [ ] handling the triggers over the parallel port [Juliette]
 - [ ] setting up the link with Eyelink (pylink) [Ronald]
 - [ ] recording the crucial parameters to replay the exact same experiment [Juliette]
-- [ ] getting the subject registration to work => pop-up menu to select an existing subject (new session) ? [Ronald]
+- [x] getting the subject registration to work => pop-up menu to select an existing subject (new session) ? [Ronald]
