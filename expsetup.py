@@ -35,6 +35,6 @@ expInfo = dict(metaData=dict(), Data=dict())
 subject, subject_path = register_subject(modalities={'Gaze', 'EEG'})
 expInfo['metaData'].update(**subject)
 expInfo['id'] = get_subjectid(subject)  # to be used for the filenames
-for m in expInfo['metaData']['modalities']:
+for m in expInfo['metaData']['modalities'].split(','):
     expInfo['Data'][m] = dict()
     expInfo['Data'][m]['path'] = Path(subject_path, m)

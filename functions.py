@@ -119,7 +119,7 @@ def register_subject(datapath='../Data', modalities=None):
     except FileExistsError:
         pass
 
-    for m in subject['modalities']:
+    for m in subject['modalities'].split(','):
         try:
             os.mkdir(Path(subject_path, m))
         except FileExistsError:
