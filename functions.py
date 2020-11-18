@@ -1,5 +1,9 @@
 from scipy.stats import lognorm
 import numpy as np
+import os
+from pathlib import Path
+import random
+import csv
 
 
 def loglikelihood_lognormal(waiting_times):
@@ -28,3 +32,98 @@ def draw_next_waiting_time(mu, sigma):
 
     X = lognorm(s=sigma, loc=0, scale=np.exp(mu))
     return X.rvs()
+
+def getModalities(expInfo):
+    return ",".join([s for s in expInfo['metaData']['modalities']])
+
+
+def get_subjectid(subject):
+    return subject['study'] + subject['subject_id'] + '_' + '{:1d}'.format(subject['session'])
+
+
+def register_subject(datapath='../Data', modalities=None):
+    """ register a subject in the database
+
+    if the subject is already registered, then increment the counter of the session number
+    if not register the subject in its first session
+    """
+    def generate_id():
+        return '{:05d}'.format(random.randint(0, 99999))
+
+    # take care of the data path
+    datapath = Path(datapath).resolve()
+    while True:
+        try:
+            os.mkdir(datapath)
+            print("{} succesfully created!".format(datapath))
+            break
+        except FileExistsError:
+            ans = input("{} already exists, using this directory for data storage? Y/[N]? ".format(datapath))
+            if ans in {"y", "Y"}:
+                print("Your choice has been succesfully registered")
+                break
+            else:
+                datapath = Path(input("specify a new datapath: ")).resolve()
+
+    # probe for study
+    while True:
+        study = input('Is your subject participating in a Pilot or in the main Study? P / [S]? ').upper()
+        if study in {'P', 'S', ''}:
+            study = 'S' if study=='' else study
+            break
+        else:
+            print('Invalid answer, please specify P or S')
+
+    participant_list = Path(datapath, 'participants.tsv')
+    # create a participant list at the root of the data directory if it does not yet exist and corresponding subject id
+    if not participant_list.exists():
+        print("Creating the file 'participants.tsv' in your data directory")
+        with open(participant_list, 'w', newline='', encoding='utf-8') as f:
+            writer = csv.DictWriter(f, delimiter='\t', fieldnames=['subject_id', 'study', 'session', 'modalities'])  # tab seperated file
+            writer.writeheader()
+            session = 1 if study=='S' else 0
+            sid = generate_id()
+    else:
+        participants = []  # get the already registered patients
+        with open(participant_list, 'r', encoding='utf-8') as f:
+            reader = csv.DictReader(f, delimiter='\t', fieldnames=['subject_id', 'study', 'session', 'modalities'])
+            for row in reader:
+                participants.append(row)
+        
+        while True:
+            registered_participants = set([p['subject_id'] for p in participants])
+            print(registered_participants)
+            sid = input('give the subject id if the subject is already in the list of participants, if not press [ENTER]: ')
+            if sid in registered_participants:
+                session = max([int(p['session']) for p in participants if p['subject_id']==sid])
+                if study == 'P':
+                    print('It is not allowed to do more than one pilot session on the same subject, converting to main Study!')
+                    study = 'S'  # not allowed to do twice a pilot on the same person
+                break
+            elif sid == '':
+                sid = generate_id()
+                session = 1 if study=='S' else 0
+                while sid in participants:  # must be a unique id
+                    sid = generate_id()
+                break
+                
+    subject = dict(subject_id=sid, study=study, session=session, modalities=','.join(modalities))
+    with open(participant_list, 'a+', newline='', encoding='utf-8') as f:
+            writer = csv.DictWriter(f, delimiter='\t', fieldnames=['subject_id', 'study', 'session', 'modalities'])  # tab seperated file
+            writer.writerow(subject) 
+    
+    # create some extra folders
+    subject_path = Path(datapath, get_subjectid(subject)[:-2])
+    try:
+        os.mkdir(subject_path)
+    except FileExistsError:
+        pass
+
+    for m in subject['modalities']:
+        try:
+            os.mkdir(Path(subject_path, m))
+        except FileExistsError:
+            pass
+
+               
+    return subject, subject_path
