@@ -85,8 +85,8 @@ def register_subject(datapath='../Data', modalities=None):
             sid = generate_id()
     else:
         participants = []  # get the already registered patients
-        with open(participant_list, 'r', encoding='utf-8') as f:
-            reader = csv.DictReader(f, delimiter='\t', fieldnames=['subject_id', 'study', 'session', 'modalities'])
+        with open(participant_list, 'r', encoding='utf-8', newline='') as f:
+            reader = csv.DictReader(f, delimiter='\t')
             for row in reader:
                 participants.append(row)
         
