@@ -1,27 +1,41 @@
 from psychopy import visual, core, clock
-from expsetup import win, kb
-from stims import circle, fix_point, plaid
-from math import cos, sin, pi, sqrt
-from psychopy.tools.monitorunittools import deg2pix, pix2deg
+from expsetup import win, kb, expInfo
+from stims import plaid_stims
 
-bkg, p = plaid['coh']
-current_stims = (bkg, p, circle, fix_point)
-for s in current_stims:
-    s.autoDraw = True
 
 speed = 1  # degrees per second
 
-timer = clock.CountdownTimer(start=5)
+timer = clock.Clock()
 now = start_time = timer.getTime()
 kb.clock.reset()  # when you want to start the timer
 
 keycode = {'right': 1, 'up': 2, 'left':4}
 current_keys = 0
 new_keys = 0
+nflips = 0
 
+for stim in plaid_stims:
+    for s in plaid_stims[stim]:
+        s.autoDraw = True
+    nflips += 1
+    print(stim)
+    flip_time = timer.getTime()
+    while now < nflips * 5:
+        now = timer.getTime()
+        plaid_stims[stim][1].phase = (0, speed * (now - start_time))
+        
+        win.flip()
+
+    for s in plaid_stims[stim]:
+        s.autoDraw = False
+
+        
+
+"""
 while timer.getTime() > 0:
     now = timer.getTime()
-    p.phase = (0, -speed * (now - start_time))
+    if now > 15:
+        p.phase = (0, -speed * (now - start_time))
     win.flip()
 
     # key presses
@@ -37,8 +51,11 @@ while timer.getTime() > 0:
     if not current_keys == new_keys:
         current_keys = new_keys
         print('{:03b}'.format(current_keys))
+"""
     
 # for s in current_stims:
 #    s.autoDraw = False
 
 win.close()
+# io.devices.tracker.setRecordingState(False)
+# io.quit()
