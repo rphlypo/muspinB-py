@@ -1,18 +1,19 @@
 from psychopy import visual, core, clock
 from expsetup import win, kb
 from stims import circle, fix_point, plaid
+from math import cos, sin, pi, sqrt
+from psychopy.tools.monitorunittools import deg2pix, pix2deg
 
-stim1, stim2 = plaid['Amb']
-current_stims = (stim1, stim2, circle, fix_point)
+bkg, p = plaid['coh']
+current_stims = (bkg, p, circle, fix_point)
 for s in current_stims:
     s.autoDraw = True
 
-speed = 1  # pixels per second
+speed = 1  # degrees per second
 
-timer = clock.CountdownTimer(start=1)
+timer = clock.CountdownTimer(start=5)
 now = start_time = timer.getTime()
 kb.clock.reset()  # when you want to start the timer
-
 
 keycode = {'right': 1, 'up': 2, 'left':4}
 current_keys = 0
@@ -20,8 +21,7 @@ new_keys = 0
 
 while timer.getTime() > 0:
     now = timer.getTime()
-    stim1.phase = (speed * (now - start_time)) % 1
-    stim2.phase = (-speed * (now - start_time)) % 1
+    p.phase = (0, -speed * (now - start_time))
     win.flip()
 
     # key presses
@@ -38,7 +38,7 @@ while timer.getTime() > 0:
         current_keys = new_keys
         print('{:03b}'.format(current_keys))
     
-for s in current_stims:
-    s.autoDraw = False
+# for s in current_stims:
+#    s.autoDraw = False
 
 win.close()
