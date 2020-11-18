@@ -48,7 +48,6 @@ def createPlaids(alpha, **plaid_params):  # use only for coherent
                     np.logical_or(Y>1-h+X, Y<-1+h+X)), alpha[1], 1)
 
     transp_mean = dc ** 2 * alpha[0] * alpha[1] + (1 - dc) ** 2 + dc * (1 - dc) * (alpha[0] + alpha[1])
-    print(transp_mean)
     grating = (grating_r * grating_l - transp_mean) / (1 - alpha[0] * alpha[1])
     
     bkg = visual.Circle(win=win, size=12.7, lineWidth=0, fillColor=bkgcol, autoDraw=False)
