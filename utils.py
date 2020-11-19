@@ -137,6 +137,19 @@ def register_subject(datapath='../Data', modalities=None):
             os.mkdir(Path(subject_path, m))
         except FileExistsError:
             pass
-
                
     return subject, subject_path
+
+
+def get_experiment_mode():
+    while True:
+        mode = input('Do you want to run the [[F]]ull experiment or only a [T]est? ')
+        if mode.lower() in {'f', ''}:
+            run_mode = "full"
+            break
+        elif mode.lower() == 't':
+            run_mode = "test"
+            break
+        else:
+            print("Run mode {} unknown, please choose either 't' or 'f'.".format(mode))
+    return run_mode

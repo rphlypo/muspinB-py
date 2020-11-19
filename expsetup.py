@@ -33,16 +33,7 @@ kb = keyboard.Keyboard()
 
 expInfo = dict(metaData=dict(), Data=dict())
 
-while True:
-    mode = input('Do you want to run the [[F]]ull experiment or only a [T]est? ')
-    if mode.lower() in {'f', ''}:
-        run_mode = "full"
-        break
-    elif mode.lower() == 't':
-        run_mode = "test"
-        break
-    else:
-        print("Run mode {} unknown, please choose either 't' or 'f'.".format(mode))
+run_mode = utils.get_experiment_mode()
     
 
 if run_mode == "full":
