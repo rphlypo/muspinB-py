@@ -141,7 +141,7 @@ def register_subject(datapath='../Data', modalities=None):
     return subject, subject_path
 
 
-def get_experiment_mode():
+def set_experiment_mode():
     while True:
         mode = input('Do you want to run the [[F]]ull experiment or only a [T]est? ')
         if mode.lower() in {'f', ''}:
@@ -153,3 +153,15 @@ def get_experiment_mode():
         else:
             print("Run mode {} unknown, please choose either 't' or 'f'.".format(mode))
     return run_mode
+
+
+def create_experiment_structure(nBlocks = 3):
+    conditions = ['nAmb_nKp', 'nAmb_Kp', 'Amb_nKp']
+    learning_phase = TrialHandler([dict(cond=conditions[k]) for k in range(3)], 1, method='sequential')
+    training_phase = TrialHandler([dict(cond=conditions[3])], 4)
+    testing_phase = TrialHandler([dict(cond=conditions[k]) for k in range(4)], nBlocks, method='random')
+
+    exp_structure = TrialHandler(
+        [dict(name="learning_phase", trials=learning_phase),
+        dict(name="training_phase", trials=training_phase),
+        dict(name="testing_phase", trials=testing_phase)], nReps=1, method='sequential')
