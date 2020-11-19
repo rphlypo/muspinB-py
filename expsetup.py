@@ -33,19 +33,32 @@ kb = keyboard.Keyboard()
 
 expInfo = dict(metaData=dict(), Data=dict())
 
-# We register a new subject
-subject, subject_path = register_subject(modalities={'Gaze', 'EEG'})
-expInfo['metaData'].update(**subject)
-expInfo['id'] = get_subjectid(subject)  # to be used for the filenames
-for m in expInfo['metaData']['modalities'].split(','):
-    expInfo['Data'][m] = dict()
-    expInfo['Data'][m]['path'] = Path(subject_path, m)
-# setting up the Gaze procedure
-if 'gaze' in [m.lower() for m in expInfo['metaData']['modalities'].split(',')]: 
-    et_config, guiding_eye = eyetracking.setup( get_subjectid( subject), win)
-    io = launchHubServer(**et_config)
-    # run eyetracker calibration (later)
-    r = io.devices.tracker.runSetupProcedure()  # <<<<< needs working pylink
+while True:
+    mode = input('Do you want to run the [[F]]ull experiment or only a [T]est? ')
+    if mode.lower() in {'f', ''}:
+        run_mode = True
+        break
+    elif mode.lower() == 't':
+        run_mode = False
+        break
+    else:
+        print("Run mode {} unknown, please choose either 't' or 'f'.".format(mode))
+    
+
+if run_mode == "full":
+    # We register a new subject
+    subject, subject_path = register_subject(modalities={'Gaze', 'EEG'})
+    expInfo['metaData'].update(**subject)
+    expInfo['id'] = get_subjectid(subject)  # to be used for the filenames
+    for m in expInfo['metaData']['modalities'].split(','):
+        expInfo['Data'][m] = dict()
+        expInfo['Data'][m]['path'] = Path(subject_path, m)
+    # setting up the Gaze procedure
+    if 'gaze' in [m.lower() for m in expInfo['metaData']['modalities'].split(',')]: 
+        et_config, guiding_eye = eyetracking.setup( get_subjectid( subject), win)
+        io = launchHubServer(**et_config)
+        # run eyetracker calibration (later)
+        r = io.devices.tracker.runSetupProcedure()  # <<<<< needs working pylink
 
 """
 hubserver = launchHubServer(
