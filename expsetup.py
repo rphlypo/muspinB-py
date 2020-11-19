@@ -7,6 +7,7 @@ except OSError:
 
 from psychopy import monitors, visual
 from psychopy.hardware import keyboard
+from psychopy.iohub.client import launchHubServer
 
 from scipy.constants import inch
 from math import cos, atan, tan
@@ -33,9 +34,33 @@ kb = keyboard.Keyboard()
 expInfo = dict(metaData=dict(), Data=dict())
 
 # We register a new subject
-subject, subject_path = register_subject(modalities={'EEG'})
+subject, subject_path = register_subject(modalities={'Gaze', 'EEG'})
 expInfo['metaData'].update(**subject)
 expInfo['id'] = get_subjectid(subject)  # to be used for the filenames
 for m in expInfo['metaData']['modalities'].split(','):
     expInfo['Data'][m] = dict()
     expInfo['Data'][m]['path'] = Path(subject_path, m)
+# setting up the Gaze procedure
+if 'gaze' in [m.lower() for m in expInfo['metaData']['modalities'].split(',')]: 
+    et_config, guiding_eye = eyetracking.setup( get_subjectid( subject), win)
+    io = launchHubServer(**et_config)
+    # run eyetracker calibration (later)
+    r = io.devices.tracker.runSetupProcedure()  # <<<<< needs working pylink
+
+"""
+hubserver = launchHubServer(
+    experiment_code = 'Muspin-B',
+    session_code = subject_id,
+    experiment_info = dict(
+        version = '0.1.0'
+    ),
+    session_info = dict(
+        user_variables = expInfo
+    ),
+    datastore_name = get_subjectid( subject),
+    psychopy_monitor_name = 'my_mon',
+    iohub_config_name = '',  # should be completed for the configuration file of eyetracker
+    **eyetracker_config,
+
+)
+"""
