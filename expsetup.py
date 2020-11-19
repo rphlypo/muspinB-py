@@ -7,7 +7,7 @@ except OSError:
 
 from psychopy import monitors, visual
 from psychopy.hardware import keyboard
-from psychopy.iohub import launchHubServer
+from psychopy.iohub import client
 
 from scipy.constants import inch
 from math import cos, atan, tan
@@ -56,7 +56,7 @@ if run_mode == "full":
     # setting up the Gaze procedure
     if 'gaze' in [m.lower() for m in expInfo['metaData']['modalities'].split(',')]: 
         et_config, guiding_eye = eyetracking.setup( get_subjectid( subject), win)
-        io = launchHubServer(**et_config)
+        io = client.launchHubServer(**et_config)
         # run eyetracker calibration (later)
         r = io.devices.tracker.runSetupProcedure()  # <<<<< needs working pylink
 
