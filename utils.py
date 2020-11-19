@@ -4,9 +4,22 @@ import os
 from pathlib import Path
 import random
 import csv
+from psychopy import core
 
 
-def loglikelihood_lognormal(waiting_times):
+def wait_keypress( kb, wait):
+    timer = core.CountdownTimer( wait)
+    while timer.getTime() > 0 :
+        keys = kb.getKeys( [ 'quit', 'space'], clear=True)
+        if 'space' in keys:
+            break
+        elif 'quit' in keys:
+            ans = input( 'Do you really want to quit the experiment? [y/n] ')
+            if ans.lower() == 'y':
+                core.quit()
+            
+
+def loglikelihood_lognormal( waiting_times):
     """ compute the most likely parameters for the log-normal law, given waiting times
     Arguments
     waiting_times   : array of waiting times in the process
