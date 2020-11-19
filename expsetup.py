@@ -7,12 +7,12 @@ except OSError:
 
 from psychopy import monitors, visual
 from psychopy.hardware import keyboard
-from psychopy.iohub.client import launchHubServer
+from psychopy.iohub import launchHubServer
 
 from scipy.constants import inch
 from math import cos, atan, tan
 from constants import monitor_constants, trials
-from functions import register_subject, get_subjectid
+from utils import register_subject, get_subjectid
 from pathlib import Path
 import eyetracking
 
