@@ -108,7 +108,7 @@ def register_subject(datapath='../Data', modalities=None):
             print(registered_participants)
             sid = input('give the subject id if the subject is already in the list of participants, if not press [ENTER]: ')
             if sid in registered_participants:
-                session = max([int(p['session']) for p in participants if p['subject_id']==sid])
+                session = max([int(p['session']) for p in participants if p['subject_id']==sid]) + 1
                 if study == 'P':
                     print('It is not allowed to do more than one pilot session on the same subject, converting to main Study!')
                     study = 'S'  # not allowed to do twice a pilot on the same person
