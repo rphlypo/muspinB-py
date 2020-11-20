@@ -6,7 +6,7 @@ import utils
 import random
 
 
-expInfo['Data'] = ExperimentHandler(dataFileName=expInfo['metaData']['paths']['root'])  # give filename to store data to
+expInfo['Data'] = ExperimentHandler(name="Muspin-B", dataFileName=expInfo['metaData']['paths']['root'])  # give filename to store data to
 exp_structure = utils.create_experiment_structure( nBlocks=1)
 
 expInfo['Params'] = dict(speed = 1)  # speed in degrees per second
@@ -24,6 +24,13 @@ global_timer = core.Clock()
 for phase in exp_structure:
     exp.addLoop(phase['trials'])  # register
     for trial in phase['trials']:
+
+        if not trial.thisN % 28:  # every 28 trials (start and halfway the 14×4 trials in testing), give the subject a big, big break, then launch a calibration ? 
+            pass
+            
+        elif not trial.thisN % 8:  # launch a drift correction every 8 trials if no calibration was run ? Give the subject a break
+            pass
+            
         exp.addData('trial.phase', phase['name'])
         stim_cond, kb_cond = trial['cond'].split('_')  # get the explicit stim condition and keyboard condition
         duration = random.uniform(40, 45)  # each trial lasts in between 40 and 45 seconds
