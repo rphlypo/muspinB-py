@@ -24,7 +24,7 @@ def setup(filename, win):
     bkgcolor.append(255)
 
     # see https://www.psychopy.org/api/iohub/device/eyetracker_interface/SR_Research_Implementation_Notes.html
-    eyetracker_config = {'eyetracker.hw.sr_research.eyelink.eyetracker': {
+    eyetracker_config = {'eyetracker.hw.sr_research.eyelink.EyeTracker': {
                         'name': 'tracker',
                         'model_name': 'EYELINK 1000 DESKTOP',
                         'runtime_settings': {
@@ -38,6 +38,5 @@ def setup(filename, win):
                         'default_native_data_file_name': filename,
                         'calibration': {
                             'screen_background_color': bkgcolor}}}  # make backgroundcolor same as during stim representation
-
-
+                            
     return eyetracker_config, guiding_eye
