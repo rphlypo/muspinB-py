@@ -61,7 +61,7 @@ fix_point = visual.Circle(win, size=2, units='pix', lineWidth=0, lineColor="red"
 
 
 plaid_stims = dict( 
-    Amb=createPlaids([.95, .95], **plaid_params),
+    amb=createPlaids([.95, .95], **plaid_params),
     transpL=createPlaids([.2, .8], **plaid_params),
     transpR=createPlaids([.8, .2], **plaid_params),
     coh=createPlaids([.4, .4], **plaid_params)
