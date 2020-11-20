@@ -8,13 +8,14 @@ except OSError:
 from psychopy import monitors, visual
 from psychopy.hardware import keyboard
 from psychopy.iohub import client
+from psychopy.data import ExperimentHandler, TrialHandler
 
 from scipy.constants import inch
 from math import cos, atan, tan
 from constants import monitor_constants, trials
-from utils import register_subject, get_subjectid
 from pathlib import Path
 import eyetracking
+import utils
 
 
 def make_monitor(monitor_name, diag_mon, pixels, viewing_distance):
@@ -33,23 +34,26 @@ kb = keyboard.Keyboard()
 
 expInfo = dict(metaData=dict(), Data=dict())
 
-run_mode = utils.get_experiment_mode()
+run_mode = utils.set_experiment_mode()
     
 
 if run_mode == "full":
     # We register a new subject
-    subject, subject_path = register_subject(modalities={'Gaze', 'EEG'})
+    subject, subject_path = utils.register_subject(modalities={'Gaze', 'EEG'})
     expInfo['metaData'].update(**subject)
-    expInfo['id'] = get_subjectid(subject)  # to be used for the filenames
+    expInfo['metaData']['paths'] = dict()
+    expInfo['metaData']['paths']['root'] = subject_path
+    expInfo['id'] = utils.get_subjectid(subject)  # to be used for the filenames
     for m in expInfo['metaData']['modalities'].split(','):
-        expInfo['Data'][m] = dict()
-        expInfo['Data'][m]['path'] = Path(subject_path, m)
+        expInfo['metaData']['paths'][m] = Path(subject_path, m)
     # setting up the Gaze procedure
     if 'gaze' in [m.lower() for m in expInfo['metaData']['modalities'].split(',')]: 
-        et_config, guiding_eye = eyetracking.setup( get_subjectid( subject), win)
+        et_config, guiding_eye = eyetracking.setup( utils.get_subjectid( subject), win)
         io = client.launchHubServer(**et_config)
         # run eyetracker calibration (later)
         r = io.devices.tracker.runSetupProcedure()  # <<<<< needs working pylink
+else :
+    expInfo['metaData'] = dict(paths=dict(root=None))
 
 """
 hubserver = launchHubServer(
