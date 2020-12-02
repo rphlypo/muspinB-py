@@ -73,8 +73,8 @@ def register_subject(datapath='../Data', modalities=None):
             print("{} succesfully created!".format(datapath))
             break
         except FileExistsError:
-            ans = input("{} already exists, using this directory for data storage? Y/[N]? ".format(datapath))
-            if ans in {"y", "Y"}:
+            ans = input("{} already exists, using this directory for data storage? [[Y]]/[N]? ".format(datapath)).upper()
+            if ans in {'Y', ''}:
                 print("Your choice has been succesfully registered")
                 break
             else:
@@ -82,7 +82,7 @@ def register_subject(datapath='../Data', modalities=None):
 
     # probe for study
     while True:
-        study = input('Is your subject participating in a Pilot or in the main Study? P / [S]? ').upper()
+        study = input('Is your subject participating in a [P]ilot or in the main [[S]]tudy? ').upper()
         if study in {'P', 'S', ''}:
             study = 'S' if study=='' else study
             break
@@ -107,13 +107,17 @@ def register_subject(datapath='../Data', modalities=None):
         
         while True:
             registered_participants = set([p['subject_id'] for p in participants])
-            print(registered_participants)
-            sid = input('give the subject id if the subject is already in the list of participants, if not press [ENTER]: ')
+            if registered_participants:
+                print(registered_participants)
+                sid = input('give the subject id if the subject is already in the list of participants, if not press [ENTER]: ')
             if sid in registered_participants:
                 session = max([int(p['session']) for p in participants if p['subject_id']==sid]) + 1
                 if study == 'P':
-                    print('It is not allowed to do more than one pilot session on the same subject, converting to main Study!')
-                    study = 'S'  # not allowed to do twice a pilot on the same person
+                    main_study = input('It is not allowed to do more than one pilot session on the same subject, converting to main [[S]]tudy or [Q]uit!').upper()
+                    if main_study in {'S', ''}:
+                        study = 'S'  # not allowed to do twice a pilot on the same person
+                    else:
+                        core.quit()
                 break
             elif sid == '':
                 sid = generate_id()
