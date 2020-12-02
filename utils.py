@@ -29,7 +29,7 @@ def loglikelihood_lognormal( waiting_times):
     mu      : mean of the lognormal variable
     sigma   : standard deviation of the lognormal variable
     """
-    sigma, loc, scale = lognorm.fit(waiting_times, loc=0)
+    sigma, _, scale = lognorm.fit(waiting_times, loc=0)
     mu = np.log(scale)
     return mu, sigma
 
@@ -46,6 +46,7 @@ def draw_next_waiting_time(mu, sigma):
 
     X = lognorm(s=sigma, loc=0, scale=np.exp(mu))
     return X.rvs()
+
 
 def getModalities(expInfo):
     return ",".join([s for s in expInfo['metaData']['modalities']])
@@ -157,13 +158,13 @@ def set_experiment_mode():
 
 
 def create_experiment_structure( nBlocks = 3):
-    conditions = ['nAmb_nKp', 'nAmb_Kp', 'Amb_nKp', 'Amb_Kp']
+    conditions = ['nAmb_nKp', 'nAmb_Kp', 'Amb_nKp', 'Amb_Kp']  # the four different conditions, key to our experiment
     learning_phase = TrialHandler( [ dict( cond=conditions[k]) for k in range(3)], 1, method='sequential')
     training_phase = TrialHandler( [ dict( cond=conditions[3])], 4)
     testing_phase = TrialHandler( [ dict( cond=conditions[k]) for k in range(4)], nBlocks, method='random')
 
     exp_structure = TrialHandler(
-        [ dict( name="learning_phase", trials=learning_phase),
-          dict( name="training_phase", trials=training_phase),
-          dict( name="testing_phase", trials=testing_phase)], nReps=1, method='sequential')
+        [ dict( name="learn", trials=learning_phase),
+          dict( name="train", trials=training_phase),
+          dict( name="test", trials=testing_phase)], nReps=1, method='sequential')
     return exp_structure
