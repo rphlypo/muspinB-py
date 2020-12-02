@@ -159,9 +159,9 @@ def set_experiment_mode():
 
 def create_experiment_structure( nBlocks = 3):
     conditions = ['nAmb_nKp', 'nAmb_Kp', 'Amb_nKp', 'Amb_Kp']  # the four different conditions, key to our experiment
-    learning_phase = TrialHandler( [ dict( cond=conditions[k]) for k in range(3)], 1, method='sequential')
-    training_phase = TrialHandler( [ dict( cond=conditions[3])], 4)
-    testing_phase = TrialHandler( [ dict( cond=conditions[k]) for k in range(4)], nBlocks, method='random')
+    learning_phase = TrialHandler( [ dict( cond=conditions[k]) for k in range(3)], 1, method='sequential')  # learning the four percepts
+    training_phase = TrialHandler( [ dict( cond=conditions[3])], 4)  # learn the log-normal parameters through the keypress responses
+    testing_phase = TrialHandler( [ dict( cond=conditions[k]) for k in range(4)], nBlocks, method='random')  # get randomised blocks of all 4 conditions
 
     exp_structure = TrialHandler(
         [ dict( name="learn", trials=learning_phase),
