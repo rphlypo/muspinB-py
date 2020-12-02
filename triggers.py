@@ -52,3 +52,4 @@ port.setData( triggers['general']['init'])
 
 def sendTrigger(value):
     port.setData(value)
+    # TODO : send trigger as message to the Eyelink ?
