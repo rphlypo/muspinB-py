@@ -4,8 +4,12 @@ import os
 from pathlib import Path
 import random
 import csv
+import json
 from psychopy import core
 from psychopy.data import TrialHandler
+
+
+keycode = { 'right': 1, 'up': 2, 'left':4}
 
 
 def wait_keypress( kb, wait):
@@ -161,14 +165,30 @@ def set_experiment_mode():
     return run_mode
 
 
-def create_experiment_structure( nBlocks = 3):
+def create_experiment_structure( nBlocks = None):
+    if nBlocks is None:
+        from constants import nBlocks
     conditions = ['nAmb_nKp', 'nAmb_Kp', 'Amb_nKp', 'Amb_Kp']  # the four different conditions, key to our experiment
-    learning_phase = TrialHandler( [ dict( cond=conditions[k]) for k in range(3)], 1, method='sequential')  # learning the four percepts
-    training_phase = TrialHandler( [ dict( cond=conditions[3])], 4)  # learn the log-normal parameters through the keypress responses
-    testing_phase = TrialHandler( [ dict( cond=conditions[k]) for k in range(4)], nBlocks, method='random')  # get randomised blocks of all 4 conditions
+    learning_phase = TrialHandler( [ dict( cond=conditions[k]) for k in range(3)], nBlocks['learn'], method='sequential')  # learning the four percepts
+    training_phase = TrialHandler( [ dict( cond=conditions[3])], nBlocks['train'])  # learn the log-normal parameters through the keypress responses
+    testing_phase = TrialHandler( [ dict( cond=conditions[k]) for k in range(4)], nBlocks['test'], method='random')  # get randomised blocks of all 4 conditions
 
     exp_structure = TrialHandler(
         [ dict( name="learn", trials=learning_phase),
           dict( name="train", trials=training_phase),
           dict( name="test", trials=testing_phase)], nReps=1, method='sequential')
     return exp_structure
+
+
+def encode( key, d=keycode):
+    return d[key]
+
+
+def decode( keyval, d=keycode):
+    return [k for k, v in d.items() if v==keyval][0]
+
+
+def load_init( f):
+    with open( f) as fh:
+        d = json.load(fh)
+    return d
