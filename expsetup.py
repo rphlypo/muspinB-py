@@ -112,7 +112,7 @@ def init( init_file=None):
         init_file = init_file
     )
 
-return expInfo, win, kb
+    return expInfo, win, kb
 
 """
 hubserver = launchHubServer(
