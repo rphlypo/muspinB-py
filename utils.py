@@ -12,8 +12,8 @@ from psychopy.data import TrialHandler
 keycode = { 'right': 1, 'up': 2, 'left':4}
 
 
-def wait_keypress( kb, wait):
-    timer = core.CountdownTimer( wait)
+def wait_keypress( kb, max_wait_time):
+    timer = core.CountdownTimer( max_wait_time)
     while timer.getTime() > 0 :
         keys = kb.getKeys( [ 'quit', 'space'], clear=True)
         if 'space' in keys:
@@ -33,12 +33,12 @@ def loglikelihood_lognormal( waiting_times):
     mu      : mean of the lognormal variable
     sigma   : standard deviation of the lognormal variable
     """
-    sigma, _, scale = lognorm.fit(waiting_times, loc=0)
-    mu = np.log(scale)
+    sigma, _, scale = lognorm.fit( waiting_times, loc=0)
+    mu = np.log( scale)
     return mu, sigma
 
 
-def draw_next_waiting_time(mu, sigma):
+def draw_next_waiting_time( mu, sigma):
     """ compute the waiting time until the next event, given lognormal distribution
     Arguments
     mu      : mean of the lognormal variable
@@ -48,57 +48,57 @@ def draw_next_waiting_time(mu, sigma):
     t       : a single sample, specifying waiting time until the next event (flip)
     """
 
-    X = lognorm(s=sigma, loc=0, scale=np.exp(mu))
+    X = lognorm( s=sigma, loc=0, scale=np.exp( mu))
     return X.rvs()
 
 
-def getModalities(expInfo):
-    return ",".join([s for s in expInfo['metaData']['modalities']])
+def getModalities( expInfo):
+    return ",".join( [s for s in expInfo['metaData']['modalities']])
 
 
-def get_subjectid(subject):
-    return subject['study'] + subject['subject_id'] + '_' + '{:1d}'.format(subject['session'])
+def get_subjectid( subject):
+    return subject['study'] + subject['subject_id'] + '_' + '{:1d}'.format( subject['session'])
 
 
-def register_subject(datapath='../Data', modalities=None):
+def register_subject( datapath='../Data', modalities=None):
     """ register a subject in the database
 
     if the subject is already registered, then increment the counter of the session number
     if not register the subject in its first session
     """
     def generate_id():
-        return '{:05d}'.format(random.randint(0, 99999))
+        return '{:05d}'.format( random.randint( 0, 99999))
 
     # take care of the data path
-    datapath = Path(datapath).resolve()
+    datapath = Path( datapath).resolve()
     while True:
         try:
-            os.mkdir(datapath)
-            print("{} succesfully created!".format(datapath))
+            os.mkdir( datapath)
+            print( '{} succesfully created!'.format(datapath))
             break
         except FileExistsError:
             ans = input("{} already exists, using this directory for data storage? [[Y]]/[N]? ".format(datapath)).upper()
             if ans in {'Y', ''}:
-                print("Your choice has been succesfully registered")
+                print( 'Your choice has been succesfully registered')
                 break
             else:
-                datapath = Path(input("specify a new datapath: ")).resolve()
+                datapath = Path( input( "specify a new datapath: ")).resolve()
 
     # probe for study
     while True:
-        study = input('Is your subject participating in a [P]ilot or in the main [[S]]tudy? ').upper()
+        study = input( 'Is your subject participating in a [P]ilot or in the main [[S]]tudy? ').upper()
         if study in {'P', 'S', ''}:
             study = 'S' if study=='' else study
             break
         else:
-            print('Invalid answer, please specify P or S')
+            print( 'Invalid answer, please specify P or S')
 
     participant_list = Path(datapath, 'participants.tsv')
     # create a participant list at the root of the data directory if it does not yet exist and corresponding subject id
     if not participant_list.exists():
-        print("Creating the file 'participants.tsv' in your data directory")
-        with open(participant_list, 'w', newline='', encoding='utf-8') as f:
-            writer = csv.DictWriter(f, delimiter='\t', fieldnames=['subject_id', 'study', 'session', 'modalities'])  # tab seperated file
+        print( "Creating the file 'participants.tsv' in your data directory")
+        with open( participant_list, 'w', newline='', encoding='utf-8') as f:
+            writer = csv.DictWriter( f, delimiter='\t', fieldnames=['subject_id', 'study', 'session', 'modalities'])  # tab seperated file
             writer.writeheader()
             session = 1 if study=='S' else 0
             sid = generate_id()
@@ -110,14 +110,14 @@ def register_subject(datapath='../Data', modalities=None):
                 participants.append(row)
         
         while True:
-            registered_participants = set([p['subject_id'] for p in participants])
+            registered_participants = set( [p['subject_id'] for p in participants])
             if registered_participants:
-                print(registered_participants)
-                sid = input('give the subject id if the subject is already in the list of participants, if not press [ENTER]: ')
+                print( registered_participants)
+                sid = input( 'give the subject id if the subject is already in the list of participants, if not press [ENTER]: ')
             if sid in registered_participants:
-                session = max([int(p['session']) for p in participants if p['subject_id']==sid]) + 1
+                session = max( [int( p['session']) for p in participants if p['subject_id']==sid]) + 1
                 if study == 'P':
-                    main_study = input('It is not allowed to do more than one pilot session on the same subject, converting to main [[S]]tudy or [Q]uit!').upper()
+                    main_study = input( 'It is not allowed to do more than one pilot session on the same subject, converting to main [[S]]tudy or [Q]uit!').upper()
                     if main_study in {'S', ''}:
                         study = 'S'  # not allowed to do twice a pilot on the same person
                     else:
@@ -130,10 +130,10 @@ def register_subject(datapath='../Data', modalities=None):
                     sid = generate_id()
                 break
                 
-    subject = dict(subject_id=sid, study=study, session=session, modalities=','.join(modalities))
-    with open(participant_list, 'a+', newline='', encoding='utf-8') as f:
-            writer = csv.DictWriter(f, delimiter='\t', fieldnames=['subject_id', 'study', 'session', 'modalities'])  # tab seperated file
-            writer.writerow(subject) 
+    subject = dict( subject_id=sid, study=study, session=session, modalities=','.join( modalities))
+    with open( participant_list, 'a+', newline='', encoding='utf-8') as f:
+            writer = csv.DictWriter( f, delimiter='\t', fieldnames=['subject_id', 'study', 'session', 'modalities'])  # tab seperated file
+            writer.writerow( subject) 
     
     # create some extra folders
     subject_path = Path(datapath, get_subjectid(subject)[:-2])
@@ -142,9 +142,9 @@ def register_subject(datapath='../Data', modalities=None):
     except FileExistsError:
         pass
 
-    for m in subject['modalities'].split(','):
+    for m in subject['modalities'].split( ','):
         try:
-            os.mkdir(Path(subject_path, m))
+            os.mkdir( Path( subject_path, m))
         except FileExistsError:
             pass
                
@@ -153,31 +153,16 @@ def register_subject(datapath='../Data', modalities=None):
 
 def set_experiment_mode():
     while True:
-        mode = input('Do you want to run the [[F]]ull experiment or only a [T]est? ')
-        if mode.lower() in {'f', ''}:
-            run_mode = "full"
+        mode = input( 'Do you want to run the [[F]]ull experiment or only a [T]est? ').upper()
+        if mode in {'F', ''}:
+            run_mode = 'full'
             break
-        elif mode.lower() == 't':
-            run_mode = "test"
+        elif mode == 'T':
+            run_mode = 'test'
             break
         else:
-            print("Run mode {} unknown, please choose either 't' or 'f'.".format(mode))
+            print( "Run mode {} unknown, please choose either 'F' or 'T'.".format(mode))
     return run_mode
-
-
-def create_experiment_structure( nBlocks = None):
-    if nBlocks is None:
-        from constants import nBlocks
-    conditions = ['nAmb_nKp', 'nAmb_Kp', 'Amb_nKp', 'Amb_Kp']  # the four different conditions, key to our experiment
-    learning_phase = TrialHandler( [ dict( cond=conditions[k]) for k in range(3)], nBlocks['learn'], method='sequential')  # learning the four percepts
-    training_phase = TrialHandler( [ dict( cond=conditions[3])], nBlocks['train'])  # learn the log-normal parameters through the keypress responses
-    testing_phase = TrialHandler( [ dict( cond=conditions[k]) for k in range(4)], nBlocks['test'], method='random')  # get randomised blocks of all 4 conditions
-
-    exp_structure = TrialHandler(
-        [ dict( name="learn", trials=learning_phase),
-          dict( name="train", trials=training_phase),
-          dict( name="test", trials=testing_phase)], nReps=1, method='sequential')
-    return exp_structure
 
 
 def encode( key, d=keycode):
