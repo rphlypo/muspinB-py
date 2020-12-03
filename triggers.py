@@ -1,7 +1,7 @@
 from psychopy import parallel
 
 
-triggers = dict(
+trigger = dict(
     acquisition = dict(
         start           = 10,
         end             = 11,
@@ -18,7 +18,7 @@ triggers = dict(
         fixationcross   = 30,
         consigne        = 34
     ),
-    stimulus = dict(
+    condition = dict(
         nAmb_nKp        = 40,  # 40 + 0x00
         nAmb_Kp         = 41,  # 40 + 0x01
         Amb_nKp         = 42,  # 40 + 0x10
@@ -35,10 +35,11 @@ triggers = dict(
         up_left_right   = 87,  # 80 + 0x111
         esc             = 89
     ),
-    plaid = dict(
-        transp_left     = 94,  # 90 + 0x100
-        transp_right    = 91,  # 90 + 0x001
-        coherent        = 92   # 90 + 0x010
+    stimulus = dict(
+        transpL         = 94,  # 90 + 0x100
+        transpR         = 91,  # 90 + 0x001
+        coh             = 92,  # 90 + 0x010
+        amb             = 99
     ),
     eyelink = dict(
         drift           = 120,
@@ -50,6 +51,15 @@ port = parallel.ParallelPort(address=0x0378)
 port.setData( triggers['general']['init'])
 
 
-def sendTrigger(value):
-    port.setData(value)
+def sendTrigger( value):
+    port.setData( value)
     # TODO : send trigger as message to the Eyelink ?
+
+
+def quit( reason='end'):
+    # TODO save all that is there to save
+    if reason == 'interrupt':
+        sendTrigger( trigger['acquisition']['interrupt'])
+    elif reason == 'end'
+        sendTrigger( trigger['acquisition']['end'])
+    core.quit()
