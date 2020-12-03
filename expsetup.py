@@ -5,19 +5,22 @@ try:
 except OSError:
     pass
 
+import eyetracking
+import shutil
+import utils
+
 from psychopy import monitors, visual
 from psychopy.hardware import keyboard
 from psychopy.iohub import client
 from psychopy.data import ExperimentHandler, TrialHandler
 
 from scipy.constants import inch
+from psychopy.tools.typetools import float_uint8
 from math import cos, atan, tan, sqrt
 from pathlib import Path
-import eyetracking
-import utils
 
 
-def makeMonitor( **monitor_constants):
+def makeMonitor( monitor_constants):
     """ 
     :param name: name of the monitor, useful to recall settings or to override existing settings
     :param res: resolution in pixels; list containing [width, height]
@@ -58,6 +61,48 @@ def makeMonitor( **monitor_constants):
     return mon
 
 
+def eyes_setup( ):
+    translate_eyes = {'l': ('LEFT_EYE', 1000), 'r': ('RIGHT_EYE', 1000), 'b': ('BINOCULAR', 500), '': ('BINOCULAR', 500)}
+    while True:
+        eyes = input("What eyes do you want to track ? [R]ight / [L]eft / [[B]]oth? ").lower()
+        try:
+            track_eyes, srate = translate_eyes[eyes]
+            break
+        except KeyError:
+            print("eyes to track must be either 'l', 'r', or 'b', received {}".format(eyes))
+
+    while True:
+        eye = input("Specify the subject's guiding eye: [L]eft / [R]ight? ")
+        if eye.lower() in ['l', 'r']:
+            guiding_eye = translate_eyes[eye]
+            break
+        else:
+            print("guiding eye must either be 'l' or 'r', received {}".format(eye))
+    return track_eyes, srate, guiding_eye
+
+
+def eyetracker_setup( win, track_eyes, srate, filename):
+    bkgcolor = [float(float_uint8(c)) for c in win.color]
+    bkgcolor.append(255)
+
+    # see https://www.psychopy.org/api/iohub/device/eyetracker_interface/SR_Research_Implementation_Notes.html
+    eyetracker_config = {'eyetracker.hw.sr_research.eyelink.EyeTracker': {
+                        'name': 'tracker',
+                        'model_name': 'EYELINK 1000 DESKTOP',
+                        'runtime_settings': {
+                            'sampling_rate': srate,
+                            'track_eyes': track_eyes},
+                        'simulation_mode': True,  # this and the next should be set to true for debugging purposes
+                        'enable_interface_without_connection': True,
+                        'enable': True,
+                        'saveEvents': True,
+                        'monitor_event_types': ['BlinkStartEvent', 'BlinkEndEvent'],
+                        'default_native_data_file_name': filename,
+                        'calibration': {
+                            'screen_background_color': bkgcolor}}}  # make backgroundcolor same as during stim representation
+    return eyetracker_config
+
+
 def init( init_file=None):
     if init_file is None:
         while True:
@@ -79,22 +124,28 @@ def init( init_file=None):
     run_mode = utils.set_experiment_mode()    
     if run_mode == "full":
         # We register a new subject
-        subject, subject_path = utils.register_subject( modalities={'Gaze', 'EEG'})
+        subject, subject_path = utils.register_subject( modalities=init['modalities'])
         expInfo['metaData'].update( **subject)
         expInfo['metaData']['paths'] = dict()
         expInfo['metaData']['paths']['root'] = subject_path
-        expInfo['id'] = utils.get_subjectid(subject)  # to be used for the filenames
-        for m in expInfo['metaData']['modalities'].split( ','):
-            expInfo['metaData']['paths'][m] = Path( subject_path, m)
-        # setting up the Gaze procedure
-        if 'gaze' in [m.lower() for m in expInfo['metaData']['modalities'].split( ',')]: 
-            et_config, guiding_eye = eyetracking.setup( utils.get_subjectid( subject), win)
-            io = client.launchHubServer( **et_config)
-            # run eyetracker calibration (later)
-            r = io.devices.tracker.runSetupProcedure()  # <<<<< needs working pylink
+        expInfo['id'] = utils.get_subjectid( subject)  # to be used for the filenames
     else :
-        expInfo['metaData'] = dict( paths=dict( root=Path('.').resolve()))
+        expInfo['metaData'] = dict( paths=dict( root=Path('../test').resolve()))
 
+    for m in expInfo['metaData']['modalities'].split( ','):  # register the path names to the structure
+        expInfo['metaData']['paths'][m.upper()] = Path( expInfo['metaData']['paths']['root'], m.upper())
+
+    # setting up the eye-tracker
+    if 'GAZE' in expInfo['metaData']['paths']: 
+        track_eyes, srate, guiding_eye = eyes_setup()
+        et_config = eyetracker_setup( win, track_eyes, srate, expInfo['metaData']['paths']['gaze'])
+
+        et_config, guiding_eye = eyetracker_setup( utils.get_subjectid( subject), win)
+        io = client.launchHubServer( **et_config)
+        # run eyetracker calibration (later)
+        r = io.devices.tracker.runSetupProcedure()  # <<<<< needs working pylink
+
+    shutil.copy( init_file, expInfo['metaData']['paths']['root'])
 
 
     conditions = ['nAmb_nKp', 'nAmb_Kp', 'Amb_nKp', 'Amb_Kp']  # the four different conditions, key to our experiment
