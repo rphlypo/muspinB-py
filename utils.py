@@ -1,10 +1,13 @@
-from scipy.stats import lognorm
-import numpy as np
 import os
-from pathlib import Path
 import random
+import math
 import csv
 import json
+
+import numpy as np
+
+from pathlib import Path
+from scipy.stats import lognorm
 from psychopy import core
 from psychopy.data import TrialHandler
 
@@ -136,15 +139,15 @@ def register_subject( datapath='../Data', modalities=None):
             writer.writerow( subject) 
     
     # create some extra folders
-    subject_path = Path(datapath, get_subjectid(subject)[:-2])
+    subject_path = Path( datapath, get_subjectid(subject)[:-2])
     try:
-        os.mkdir(subject_path)
+        os.mkdir( subject_path)
     except FileExistsError:
         pass
 
     for m in subject['modalities'].split( ','):
         try:
-            os.mkdir( Path( subject_path, m))
+            os.mkdir( Path( subject_path, m.upper()))
         except FileExistsError:
             pass
                
@@ -177,3 +180,7 @@ def load_init( f):
     with open( f) as fh:
         d = json.load(fh)
     return d
+
+
+def speed_vector( speed, ori, sf):
+    return np.array( [0, speed / math.sin( ori * math.pi / 180) * sf])
