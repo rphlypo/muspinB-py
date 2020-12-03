@@ -1,4 +1,4 @@
-from psychopy import parallel
+from psychopy import parallel, core
 
 
 trigger = dict(
@@ -60,6 +60,6 @@ def quit( reason='end'):
     # TODO save all that is there to save
     if reason == 'interrupt':
         sendTrigger( trigger['acquisition']['interrupt'])
-    elif reason == 'end'
+    elif reason == 'end':
         sendTrigger( trigger['acquisition']['end'])
     core.quit()
