@@ -82,16 +82,16 @@ def eyes_setup( ):
 
 def eyetracker_setup( win, track_eyes, srate, filename, init_params, dummymode=False):
 
-    init_params = utils.load_init( )
+    init_params = utils.load_init( 'init_file.yaml')
     bkgcolor = [float(float_uint8(c)) for c in win.color]
     bkgcolor.append(255)
 
     # see https://www.psychopy.org/api/iohub/device/eyetracker_interface/SR_Research_Implementation_Notes.html
-    eyetracker_config = utils.load_init( )  # load eyelink settings
+    eyetracker_config = utils.load_init( et_confnig_file)  # load eyelink settings
     return eyetracker_config
 
 
-def init( init_file=None: str):
+def init( init_file=None):
     """ this is the init function that is called with an appropriate json init-file
 
     :Parameters:
