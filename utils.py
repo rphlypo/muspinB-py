@@ -2,7 +2,9 @@ import os
 import random
 import math
 import csv
-import json
+import yaml
+import glob
+import re
 
 import numpy as np
 
@@ -63,7 +65,7 @@ def get_subjectid( subject):
     return subject['study'] + subject['subject_id'] + '_' + '{:1d}'.format( subject['session'])
 
 
-def register_subject( datapath='../Data', modalities=None):
+def register_subject( datapath=None, modalities=None):
     """ register a subject in the database
 
     if the subject is already registered, then increment the counter of the session number
@@ -154,20 +156,6 @@ def register_subject( datapath='../Data', modalities=None):
     return subject, subject_path
 
 
-def set_experiment_mode():
-    while True:
-        mode = input( 'Do you want to run the [[F]]ull experiment or only a [T]est? ').upper()
-        if mode in {'F', ''}:
-            run_mode = 'full'
-            break
-        elif mode == 'T':
-            run_mode = 'test'
-            break
-        else:
-            print( "Run mode {} unknown, please choose either 'F' or 'T'.".format(mode))
-    return run_mode
-
-
 def encode( key, d=keycode):
     return d[key]
 
@@ -178,9 +166,27 @@ def decode( keyval, d=keycode):
 
 def load_init( f):
     with open( f) as fh:
-        d = json.load(fh)
+        d = yaml.load( fh, Loader=yaml.FullLoader)
     return d
 
+
+def get_init_file( search_path='.'):
+    """ 
+    """
+    filelist = []
+    for filenb, file in enumerate(glob.iglob( os.path.abspath(search_path) + '/**/*.yaml', recursive=True)):
+        filelist.append(file)
+        print('{:>3d}. {:s}'.format(filenb+1, os.path.relpath(file, search_path)))
+
+    while True:
+        init_file = input('select number of init file to use, or specify path: ')
+        if re.match('[0-9]+', init_file):
+            init_file = filelist[int(init_file)]
+        if Path(init_file).is_file():
+            break
+    
+    return init_file
+        
 
 def speed_vector( speed, ori, sf):
     return np.array( [0, speed / math.sin( ori * math.pi / 180) * sf])
