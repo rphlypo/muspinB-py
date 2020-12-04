@@ -1,0 +1,26 @@
+monitor_constants:
+    name: ASUS-VP239H
+    diag: 23
+    res: [1920, 1080]
+    viewing_distance: 56
+experiment:
+    modalities: [Gaze, EEG]
+    configuration:
+        Gaze: dummy_eyetracker.yaml
+    observer: Ronald
+    dummy_mode: True
+    structure:
+        nBlocks:
+            learn: 1
+            train: 4
+            test: 14
+    stim:
+        alpha:
+            amb: 0.95
+            coh: 0.4
+            transp: 0.2
+        ori: 30
+        vel: 1
+        sf: 0.33333
+data:
+    path: ../Data
