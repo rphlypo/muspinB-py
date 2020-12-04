@@ -87,7 +87,7 @@ def eyetracker_setup( win, track_eyes, srate, filename, init_params, dummymode=F
     bkgcolor.append(255)
 
     # see https://www.psychopy.org/api/iohub/device/eyetracker_interface/SR_Research_Implementation_Notes.html
-    eyetracker_config = utils.load_init( et_confnig_file)  # load eyelink settings
+    eyetracker_config = utils.load_init( et_config_file)  # load eyelink settings
     return eyetracker_config
 
 
