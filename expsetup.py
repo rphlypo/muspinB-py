@@ -5,7 +5,6 @@ try:
 except OSError:
     pass
 
-import eyetracking
 import shutil
 import utils
 
@@ -81,30 +80,39 @@ def eyes_setup( ):
     return track_eyes, srate, guiding_eye
 
 
-def eyetracker_setup( win, track_eyes, srate, filename):
+def eyetracker_setup( win, track_eyes, srate, filename, init_params, dummymode=False):
+
+    init_params = utils.load_init( )
     bkgcolor = [float(float_uint8(c)) for c in win.color]
     bkgcolor.append(255)
 
     # see https://www.psychopy.org/api/iohub/device/eyetracker_interface/SR_Research_Implementation_Notes.html
-    eyetracker_config = {'eyetracker.hw.sr_research.eyelink.EyeTracker': {
-                        'name': 'tracker',
-                        'model_name': 'EYELINK 1000 DESKTOP',
-                        'runtime_settings': {
-                            'sampling_rate': srate,
-                            'track_eyes': track_eyes},
-                        'simulation_mode': True,  # this and the next should be set to true for debugging purposes
-                        'enable_interface_without_connection': True,
-                        'enable': True,
-                        'saveEvents': True,
-                        'monitor_event_types': ['BlinkStartEvent', 'BlinkEndEvent'],
-                        'default_native_data_file_name': filename,
-                        'calibration': {
-                            'screen_background_color': bkgcolor}}}  # make backgroundcolor same as during stim representation
+    eyetracker_config = utils.load_init( )  # load eyelink settings
     return eyetracker_config
 
 
-def init( init_file=None):
+def init( init_file=None: str):
+    """ this is the init function that is called with an appropriate json init-file
+
+    :Parameters:
+
+    init_file : str
+        a json formatted init file containing parameters about the experimental set-up
+
+    :return:
+
+    expInfo : dict
+        dictionary gathering information about the experiment
+
+    win : psychopy.visual.win
+        window in which the experiment will be run
+
+    kb : psychopy.hardware.keyboard
+        the keyboard configuration that will be used with the appropriate listeners
+    """
     if init_file is None:
+        
+
         while True:
             try:
                 init_file = Path(input( 'Specify path to init file: ')).resolve()
@@ -115,14 +123,17 @@ def init( init_file=None):
     init = utils.load_init( init_file)
 
     mon = makeMonitor( init['monitor_constants'])
-    win = visual.Window(monitor=mon, color=[-0.3]*3, size=mon.getSizePix(), units='deg', screen=1, fullscr=True, waitBlanking=False, blendmode='add')
+    win = visual.Window( monitor=mon, color=[-0.3]*3, size=mon.getSizePix(), units='deg', screen=1, fullscr=True, waitBlanking=False, blendmode='add')
 
     kb = keyboard.Keyboard()
 
     expInfo = dict(metaData=dict(), Setup=dict(), Data=dict())
     
-    run_mode = utils.set_experiment_mode()    
-    if run_mode == "full":
+    try:
+        dummy_mode = init['experiment']['dummy']
+    except KeyError:
+        dummy_mode = False
+    if not dummy_mode:
         # We register a new subject
         subject, subject_path = utils.register_subject( modalities=init['modalities'])
         expInfo['metaData'].update( **subject)
@@ -139,23 +150,33 @@ def init( init_file=None):
     if 'GAZE' in expInfo['metaData']['paths']: 
         track_eyes, srate, guiding_eye = eyes_setup()
         et_config = eyetracker_setup( win, track_eyes, srate, expInfo['metaData']['paths']['gaze'])
-
-        et_config, guiding_eye = eyetracker_setup( utils.get_subjectid( subject), win)
+        expInfo['metaData']['GAZE']['hw'] = et_config
         io = client.launchHubServer( **et_config)
         # run eyetracker calibration (later)
         r = io.devices.tracker.runSetupProcedure()  # <<<<< needs working pylink
+
+    # setting up the EEG
+    if 'EEG' in ExpInfo['metaData']['paths']:
+        eeg_config = {
+            'eeg': {
+                'name': 'brainamp',
+                'runtime_settings': {
+                    'sampling_rate': srate
+                }
+            }
+        }
 
     shutil.copy( init_file, expInfo['metaData']['paths']['root'])
 
 
     conditions = ['nAmb_nKp', 'nAmb_Kp', 'Amb_nKp', 'Amb_Kp']  # the four different conditions, key to our experiment
     learning_phase = TrialHandler( [ dict( cond=conditions[k]) for k in range(3)], nBlocks['learn'], method='sequential')  # learning the four percepts
-    training_phase = TrialHandler( [ dict( cond=conditions[3])], nBlocks['train'])  # learn the log-normal parameters through the keypress responses
+    estimation_phase = TrialHandler( [ dict( cond=conditions[3])], nBlocks['estim'])  # learn the log-normal parameters through the keypress responses
     testing_phase = TrialHandler( [ dict( cond=conditions[k]) for k in range(4)], nBlocks['test'], method='random')  # get randomised blocks of all 4 conditions
 
     exp_structure = TrialHandler(
         [ dict( name="learn", trials=learning_phase),
-        dict( name="train", trials=training_phase),
+        dict( name="estim", trials=estimation_phase),
         dict( name="test", trials=testing_phase)], nReps=1, method='sequential')
 
     expInfo['Setup'] = dict(

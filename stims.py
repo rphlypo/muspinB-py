@@ -1,27 +1,39 @@
-from expsetup import win
 from psychopy import visual
 from psychopy.tools.monitorunittools import deg2pix
 from math import sqrt, sin, cos, pi
 import numpy as np
-
-# The grating stim: values range from -opacity to opacity about 0 (gray), using default color [1, 1, 1] 
-plaid_params = dict(win=win,
-                    tex='sqr65',
-                    mask='circle',
-                    blendmode='add', 
-                    sf=1/3,
-                    ori=30,
-                    size=12.74,
-                    units='deg',
-                    pos=(0,0),
-                    phase=0,
-                    texRes=1024,
-                    autoDraw=False)  # color=win.color,
+import utils
 
 
-def createPlaids(alpha, **plaid_params):  # use only for coherent
+def createPlaids(win, alpha, **plaid_params):  # use only for coherent
+    """ plaids are created in true transparency (multiplicative)
+    :Parameters:
+
+    win : window
+        the window in which they will be drawn
+
+    alpha : float
+        transparency level
+
+    sf : float
+        spatial frequency in deg^-1
+
+    tex : string
+        the texture which is mainly used for the duty cycle (last two characters as digits)
+
+    texRes : int
+        the resolution of the texture as number of pixels per period
+
+    ori : float
+        orientation of the gratings (± given orientation)
+
+    :return:
+
+
+
+    """
     I0 = 1  # contrast
-    bkgcol = plaid_params['win'].color # mean intensity 
+    bkgcol = win.color # mean intensity 
 
     sf = plaid_params['sf']
     plaid_params.pop('sf')
@@ -40,6 +52,7 @@ def createPlaids(alpha, **plaid_params):  # use only for coherent
     Y, X = g[0], g[1]
     h = (1-dc) / 2
 
+    # this represents a square pattern that can be used as a texture (X-like pattern)
     grating_r = np.where(np.logical_or(
                     np.logical_and(Y>1-h-X, Y<1+h-X),
                     np.logical_or(Y>2-h-X, Y<h-X)), alpha[0], 1)
@@ -56,16 +69,50 @@ def createPlaids(alpha, **plaid_params):  # use only for coherent
     return bkg, grating
 
 
-circle = visual.Circle(win, size=2.5, lineWidth=0, lineColor=win.color, fillColor=win.color, autoDraw=False)
-fix_point = visual.Circle(win, size=2, units='pix', lineWidth=0, lineColor="red", fillColor="red", autoDraw=False)
 
+def plaids( win, init_file):
+    """ create different moving plaids for different conditions ambiguous, coherent, transparent-left, transparent-right 
 
-plaid_stims = dict( 
-    amb=createPlaids([.95, .95], **plaid_params),
-    transpL=createPlaids([.2, .8], **plaid_params),
-    transpR=createPlaids([.8, .2], **plaid_params),
-    coh=createPlaids([.4, .4], **plaid_params)
-    )
+    :Parameters:
 
-for stim in plaid_stims:
-    plaid_stims[stim] = (*plaid_stims[stim], circle, fix_point)
+    win : psychopy.visual.Window
+        a psychopy window in which to draw the stimuli
+
+    init_file : str
+        path to the init file containing parameters such as alpha, ori and sf of the stimuli
+    """
+
+    init = utils.load_init( init_file)
+    alphas = init['stim']['alpha']
+    ori = init['stim']['ori']
+    sf = init['stim']['sf']
+
+    plaid_params = dict(
+        tex='sqr65',
+        mask='circle',
+        blendmode='add', 
+        sf=sf,
+        ori=ori,
+        size=12.74,
+        units='deg',
+        pos=(0,0),
+        phase=0,
+        texRes=1024,
+        autoDraw=False)  # color=win.color,
+
+    circle = visual.Circle(win, size=2.5, lineWidth=0, lineColor=win.color, fillColor=win.color, autoDraw=False)
+    fix_point = visual.Circle(win, size=2, units='pix', lineWidth=0, lineColor="black", fillColor="black", autoDraw=False)
+
+    
+
+    plaid_stims = dict( 
+        amb=createPlaids(win, [alphas['amb'], alphas['amb']], **plaid_params),
+        transpL=createPlaids(win, [alphas['transp'], 1-alphas['transp']], **plaid_params),
+        transpR=createPlaids(win, [1-alphas['transp'], alphas['transp']], **plaid_params),
+        coh=createPlaids(win, [alphas['coh'], alphas['coh']], **plaid_params)
+        )
+
+    for stim in plaid_stims:
+        plaid_stims[stim] = ( *plaid_stims[stim], circle, fix_point)
+
+    return plaid_stims
