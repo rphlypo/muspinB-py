@@ -12,7 +12,7 @@ experiment:
     structure:
         nBlocks:
             learn: 1
-            train: 4
+            estim: 4
             test: 14
     stim:
         alpha:
