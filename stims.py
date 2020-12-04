@@ -116,3 +116,7 @@ def plaids( win, init_file):
         plaid_stims[stim] = ( *plaid_stims[stim], circle, fix_point)
 
     return plaid_stims
+
+
+def transition():  # TODO: implement transition between stims
+    pass
