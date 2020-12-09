@@ -11,7 +11,7 @@ eyetracker.hw.sr_research.eyelink.EyeTracker:
     #   using the name's value; therefore it must be a valid Python
     #   variable name as well.
     #
-    name: tracker
+    name: eyelink
 
     # enable: Specifies if the device should be enabled by ioHub and monitored
     #   for events.
@@ -150,12 +150,12 @@ eyetracker.hw.sr_research.eyelink.EyeTracker:
         #   sample rates depend on the model being used. 
         #   Overall, possible rates are 250, 500, 1000, and 2000 Hz.
         #
-        sampling_rate: 250
+        sampling_rate: 500
 
         # track_eyes: Which eye(s) should be tracked? 
         #   Supported Values:  LEFT_EYE, RIGHT_EYE, BINOCULAR
         #        
-        track_eyes: RIGHT_EYE
+        track_eyes: BINOCULAR
 
         # sample_filtering: Defines the native eye tracker filtering level to be 
         #   applied to the sample event data before it is sent to the specified data stream.
