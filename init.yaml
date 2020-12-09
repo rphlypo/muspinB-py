@@ -4,6 +4,7 @@ monitor_constants:
     res: [1920, 1080]
     viewing_distance: 56
 experiment:
+    name: muspinB
     modalities: [Gaze, EEG]
     configuration:
         Gaze: dummy_eyetracker.yaml
