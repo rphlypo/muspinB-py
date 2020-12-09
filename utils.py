@@ -3,7 +3,6 @@ import random
 import math
 import csv
 import yaml
-import glob
 import re
 
 import numpy as np
@@ -159,14 +158,17 @@ def get_init_file(search_path='.'):
     """ 
     """
     filelist = []
-    for filenb, file in enumerate(glob.iglob(os.path.abspath(search_path) + '/**/*.yaml', recursive=True)):
+    for filenb, file in enumerate(Path(search_path).rglob('*.yaml')):
         filelist.append(file)
         print('{:>3d}. {:s}'.format(filenb+1, os.path.relpath(file, search_path)))
 
     while True:
+        # present possible candidate .yaml files
         init_file = input('select number of init file to use, or specify path: ')
-        if re.match('[0-9]+', init_file):
+        # user answered with a correct number
+        if re.match('[0-9]+', init_file) and 1 <= int(init_file) <= len(filelist):
             init_file = filelist[int(init_file)]
+        # check if the specified path is truly a file
         if Path(init_file).is_file():
             break
     
