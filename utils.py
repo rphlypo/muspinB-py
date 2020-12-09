@@ -140,14 +140,6 @@ def register_subject(datapath=None, modalities=None):
     return subject, subject_path
 
 
-def encode(key, d=keycode):
-    return d[key]
-
-
-def decode(keyval, d=keycode):
-    return [k for k, v in d.items() if v==keyval][0]
-
-
 def load_init(f):
     with open(f) as fh:
         d = yaml.load(fh, Loader=yaml.FullLoader)
