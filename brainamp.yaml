@@ -1,0 +1,5 @@
+eegconfig:    
+    name: brainamp
+    sample_rate: 500
+    config-file: C:\\
+    electrodes: internationl1020_64
