@@ -11,41 +11,12 @@ from pathlib import Path
 from scipy.stats import lognorm
 from psychopy import core
 from psychopy.data import TrialHandler
-          
-
-def loglikelihood_lognormal(waiting_times):
-    """ compute the most likely parameters for the log-normal law, given waiting times
-    Arguments
-    waiting_times   : array of waiting times in the process
-
-    Returns
-    mu      : mean of the lognormal variable
-    sigma   : standard deviation of the lognormal variable
-    """
-    sigma, _, scale = lognorm.fit(waiting_times, loc=0)
-    mu = np.log(scale)
-    return mu, sigma
-
-
-def draw_next_waiting_time(mu, sigma):
-    """ compute the waiting time until the next event, given lognormal distribution
-    Arguments
-    mu      : mean of the lognormal variable
-    sigma   : standard deviation of the lognormal variable
-
-    Returns
-    t       : a single sample, specifying waiting time until the next event (flip)
-    """
-
-    X = lognorm(s=sigma, loc=0, scale=np.exp(mu))
-    return X.rvs()
-
 
 def getModalities(expInfo):
     return ",".join([s for s in expInfo['metaData']['modalities']])
 
 
-def get_subjectid(subject):
+def get_sessionid(subject):
     return subject['study'] + subject['subject_id'] + '_' + '{:1d}'.format(subject['session'])
 
 
@@ -58,22 +29,15 @@ def register_subject(datapath=None, modalities=None):
     def generate_id():
         return '{:05d}'.format(random.randint(0, 99999))
 
-    # take care of the data path
+    # make the directory if not yet available, else use the existing directory
     datapath = Path(datapath).resolve()
-    while True:
-        try:
-            os.mkdir(datapath)
-            print('{} succesfully created!'.format(datapath))
-            break
-        except FileExistsError:
-            ans = input("{} already exists, using this directory for data storage? [[Y]]/[N]? ".format(datapath)).upper()
-            if ans in {'Y', ''}:
-                print('Your choice has been succesfully registered')
-                break
-            else:
-                datapath = Path(input("specify a new datapath: ")).resolve()
+    try:
+        datapath.mkdir(parents=True)
+        print('{} succesfully created!'.format(datapath))
+    except FileExistsError:
+        print('Using existing directory {}'.format(datapath))
 
-    # probe for study
+    # probe for type of study in this session
     while True:
         study = input('Is your subject participating in a [P]ilot or in the main [[S]]tudy? ').upper()
         if study in {'P', 'S', ''}:
@@ -83,7 +47,10 @@ def register_subject(datapath=None, modalities=None):
             print('Invalid answer, please specify P or S')
 
     participant_list = Path(datapath, 'participants.tsv')
-    # create a participant list at the root of the data directory if it does not yet exist and corresponding subject id
+    # create a participant list at the root of the data directory if it does not yet exist
+    # else get the already registered subjects and their sessions
+    # - a [P]ilot study corresponds to a session number of 0
+    # - an inclusion in the main [S]tudy corresponds to a session number > 0
     if not participant_list.exists():
         print("Creating the file 'participants.tsv' in your data directory")
         with open(participant_list, 'w', newline='', encoding='utf-8') as f:
@@ -118,35 +85,43 @@ def register_subject(datapath=None, modalities=None):
                 while sid in participants:  # must be a unique id
                     sid = generate_id()
                 break
-                
+
+    # create a session dictionary with the unique id, study type, session number, and modalities used   
     subject = dict(subject_id=sid, study=study, session=session, modalities=','.join(modalities))
+
+    # write the data of the newly created session in the participants.tsv file
     with open(participant_list, 'a+', newline='', encoding='utf-8') as f:
-            writer = csv.DictWriter(f, delimiter='\t', fieldnames=['subject_id', 'study', 'session', 'modalities'])  # tab seperated file
-            writer.writerow(subject) 
+        writer = csv.DictWriter(f, delimiter='\t', fieldnames=['subject_id', 'study', 'session', 'modalities'])
+        writer.writerow(subject) 
     
     # create some extra folders
-    subject_path = Path(datapath, get_subjectid(subject)[:-2])
+    subject_path = Path(datapath, get_sessionid(subject)[:-2]).resolve()
     try:
-        os.mkdir(subject_path)
+        subject_path.mkdir()
     except FileExistsError:
         pass
 
     for m in subject['modalities'].split(','):
         try:
-            os.mkdir(Path(subject_path, m.upper()))
+            Path(subject_path, m.upper()).mkdir()
         except FileExistsError:
             pass
                
-    return subject, subject_path
+    return get_sessionid(subject), subject_path
 
 
 def load_init(f):
+    if f is None:
+        f = __get_init_file( Path.cwd())
+    elif Path(f).is_dir():
+        f = __get_init_file( f) 
+
     with open(f) as fh:
         d = yaml.load(fh, Loader=yaml.FullLoader)
     return d
 
 
-def get_init_file(search_path='.'):
+def __get_init_file(search_path='.'):
     """ 
     """
     filelist = []
@@ -167,5 +142,9 @@ def get_init_file(search_path='.'):
     return init_file
         
 
-def speed_vector(speed, ori, sf):
-    return np.array([0, speed / math.sin(ori * math.pi / 180) * sf])
+def grating_to_vertical_velocity(v, theta, sf, units='rad'):
+    """ convert grating velocity to vertical velocity
+    """
+    if units == 'deg':
+        theta = theta * math.pi / 180
+    return np.array([0, v / math.sin(theta) * sf])
