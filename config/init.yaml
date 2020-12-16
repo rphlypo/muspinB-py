@@ -1,27 +1,68 @@
 monitor_constants:
+    # name: str
+    # name used to save the monitor
+    # this is the monitor used for the presentation of the stimulus
+    # the monitor should be configured as a secondary monitor on the graphics card
+    # the principal monitor is used for the experiment control
     name: ASUS-VP239H
+    # diag: int
+    # diagonal of the screen in inches
     diag: 23
+    # res: list[int]
+    # resolution of the screen [horizontal, vertical] in pixels
     res: [1920, 1080]
+    # viewing_distance: float
+    # distance to screen in cm
     viewing_distance: 56
+devices:
+    # eyetracker: path str
+    # path of the eyetracker configuration file
+    # this file will be used to initialise the eyetracker
+    eyetracker: config/dummy_eyetracker.yaml
+    # eeg: path str
+    # path of the eeg configuration file
+    # this file is purely informative and helps in reading the data a posteriori
+    eeg: config/brainamp.yaml
+    parallel_port: 0x0378
 experiment:
+    # name: str
+    # experiment name used to tag the hdf5 data file
     name: muspinB
+    # modalities: list[str]
+    # possible strings are Gaze and EEG 
     modalities: [Gaze, EEG]
-    configuration:
-        Gaze: dummy_eyetracker.yaml
+    # observer: str
+    # the person running the experiment
     observer: Ronald
+    # dummy_mode: bool [True]
+    # if dummy_mode is True, then it will run the experiment without creating the directories
     dummy_mode: True
+    # bkgcolor: float / list[float] in the interval [-1, 1]
+    bkgcolor: -0.3
+    # structure
+    # defines the structure of the blocks
     structure:
         nBlocks:
             learn: 1
             estim: 4
             test: 14
+    # some typical stimulus parameters
     stim:
+        # transparency: floats
         alpha:
             amb: 0.95
             coh: 0.4
             transp: 0.2
+        # dutycycle: int (%)
+        dc: 65
+        # orientation of gratings: float (deg)
         ori: 30
+        # velocity: float (deg)
         vel: 1
+        # spatial frequency: float
         sf: 0.33333
 data:
+    # path: path str
+    # path where the data will be stored
+    # in the root you will find participants.tsv resuming the different subjects and sessions
     path: ../Data
