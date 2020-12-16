@@ -1,152 +1,216 @@
 import random
+
 import expsetup
 import triggers
 import utils
 import stims
+import percepts
+import stats
 
-from psychopy import visual, core, clock, logging
+# logging in triggers has the extra logLevel of TRIG
+from triggers import logging
+from psychopy import visual, core, clock
 from psychopy.data import ExperimentHandler
 
 
-init_file = 'init.json'
+# change the init file according to your needs
+io, win, exp_structure, plaid_stims = expsetup.init('init.yaml')
+eyelink = io.devices.eyelink
+io.devices.keyboard.reporting = False
 
-expInfo, win, kb = expsetup.init( init_file)
-plaid_stims = stims.plaids( win, init_file)
+if expsetup.check_modality('gaze', io):
+    # see: https://discourse.psychopy.org/t/iohub-eyelink-unresponsive-keyboard-during-calibration/1023/16
+    # win.winHandle.minimize()
+    eyelink.runSetupProcedure()
+    # win.winHandle.activate()
+    # win.winHandle.maximize()
 
-expInfo['Data'] = ExperimentHandler( name="Muspin-B", dataFileName=expInfo['metaData']['paths']['root'])  # give filename to store data to
-exp = expInfo['Data']  # just a short-hand reference
-exp_structure = expInfo['Setup']['exp_structure']
 
-nAmb_plaids = set( plaid_stims.keys()) - set( ['amb'])  # get a set of the non-ambiguous plaids
-percept_times = []
 
-init = utils.load_init( init_file)
 
-expInfo['Params'] = dict(
-    velocity=init['stim']['vel'],  # speed in degrees per second (this is the speed of the individual gratings)
-    ori=init['stim']['ori']
-)
-velocity = utils.velocity_vector( expInfo['Params']['speed'], expInfo['Params']['ori'], expInfo['Params']['wavelength'])
+# get a set of the non-ambiguous plaids:
+# transparent left/right and coherent
+nAmb_plaids = set(plaid_stims.keys()) - set(['amb', 'fix'])  
+
+# get the velocity parameter that will be useful later on
+parameters = io.getSessionMetaData()['user_variables']['parameters']
+velocity = parameters['velocity']
 
 # TODO: initialise the log-normal parameters to some sensible values
 mu, sigma = 3, 2
 
-global_timer = core.Clock()  # start a global timer at the experiment level, useful to check sync a posteriori
-flip_timer = core.CountdownTimer( 0)  # time to wait until next flip in non-ambiguous stimulus condition
-percept_duration = core.Clock()  # time between different percepts, useful to estimate the parameters mu and sigma
-trial_timer = core.CountdownTimer( 0)  # total duration of the trial
+# set up some timers
+# a global timer is available at the experiment level 
+# this clock should never be reset to have a unique time base
+global_timer = core.Clock()
+# time to wait until next flip in non-ambiguous stimulus condition
+flip_timer = clock.CountdownTimer(0)
+# time between different percepts, useful to estimate the parameters mu and sigma  
+percept_duration = clock.Clock()  
+# total duration of the trial
+trial_timer = clock.CountdownTimer(0)
 
-logging.setDefaultClock( global_timer)  # logging messages will be logged using the global_timer as a clock (which should never be reset across the experiment)
+# markov renewal process, can be updated all throughout the experiment
+mrp = stats.MarkovRenewalProcess(list(
+    percepts.Percept().percept_dict['perceptual_states']))
+
+# logging experiment messages to file
+log_filename = io.getSessionMetaData()['user_variables']['logfile']
+logFile = logging.LogFile(f=log_filename, level=logging.EXP)
+trigger_filename = io.getSessionMetaData()['user_variables']['triggerfile']
+triggerFile = logging.LogFile(f=trigger_filename, level=logging.getLevel('TRIG'))
+
+# set-up the triggers
+trigger = triggers.Trigger(port=io.getSessionMetaData()['user_variables']['hw']['parallel_port'])
 
 for phase in exp_structure:
-    exp.addLoop( phase['trials'])  # register current trial in experiment structure
-    """ TODO show instructions specific to the phase
-    """
+    # exp.addLoop(phase['trials'])  # register current trial in experiment structure
+    io.clearEvents()
+    io.sendMessageEvent('BEGIN PHASE {}'.format(phase['name']), category='EXP')
+    io.createTrialHandlerRecordTable(phase)
+
+    # show instructions
+    # this is only true before the subject's learning phase
+    if phase['img']:
+        img = visual.ImageStim(win, image=phase['img'])
+        img.draw()
+        win.flip()
+        percepts.waitKeyPress(io, key=' ', timeout=20)
+
+    # show the current phase
+    text = visual.TextStim(win, text=phase['text'])
+    text.draw()
+    win.flip()
+    percepts.waitKeyPress(io, key=' ', timeout=20)
+
     for trial in phase['trials']:
-        if not trial.thisN % 28:  # every 28 trials (start and halfway the 14×4 trials in testing), give the subject a big, big break, then launch a calibration ? 
+        io.addTrialHandlerRecord(trial)
+        if not trial.thisN % 28:  
+            # every 28 trials (start and halfway the 14×4 trials in testing), give the subject a big, big break, then launch a calibration ?  
             pass  # TODO launch calibration
-            
-        elif not trial.thisN % 8:  # launch a drift correction every 8 trials if no calibration was run ? Give the subject a break
+        elif not trial.thisN % 8:  
+            # launch a drift correction every 8 trials if no calibration was run ? Give the subject a break
             pass  # TODO launch drift correction
             
-        exp.addData( 'trial.phase', phase['name'])
-        stim_cond, kb_cond = trial['cond'].split( '_')  # get the explicit stim condition and keyboard condition
-        duration = random.uniform( 40, 45)  # each trial lasts in between 40 and 45 seconds
-        exp.addData( 'trial.duration', duration)
+        stim_cond, kb_cond = trial['cond'].split('_')  # get the explicit stim condition and keyboard condition
+      
+        # choose one among these two logging methods ? or both ?
+        trial['startTime'] = global_timer.getTime() 
+        win.logOnFlip(level=logging.EXP, msg=trial['cond']) 
+       
+        """ show trial indications here before the timers start ticking
+        """
+        win.callOnFlip(trigger.send, 'trial', 'start', io)
+        img = visual.ImageStim(win, image=trial['img'])
+        img.draw()
+        win.flip()
+        percepts.waitKeyPress(io, key=' ', timeout=20)
 
-        # TODO
-        # deal with all four of the conditions STIM × RESPONSE 
-        kb.clock.reset()  # when you want to start the timer
+        """ fixation of 200 to 500 ms at start of trial
+        """
+         # send trigger to indicate a start of the trial condition
+        win.callOnFlip(trigger.send, 'condition', trial['cond'], io)
+        fix_duration = random.uniform(0.2, 0.5)
+        trial['fix_duration'] = fix_duration
+        stim = plaid_stims['fix']
+        for s in stim: s.draw()
+        win.flip()
+        clock.wait(fix_duration)
+        # TODO: we could potentially do a drift check here (is the subject truly fixating)
+
+        """ set kb reporting as a function of the condition
+        """
+        io.devices.keyboard.reporting = True if kb_cond == 'Kp' else False
+
+        """ prepare the stimulus
+        """
         if stim_cond == 'nAmb':
-            flip_timer.reset( t=utils.draw_next_waiting_time( mu, sigma))  # will automatically trigger a stim change when entering the trial
-            stim = random.sample( nAmb_plaids, 1)  # select a plaid randomly from the set of non-ambiguous plaids
-            stimChanges = []
-            plaid = plaid_stims[stim]
-            exp.addData( 'trial.mu', mu)  # get the mu and sigma used for the realisations of the waiting times
-            exp.addData( 'trial.sigma', sigma)
-        else:
-            stim = 'amb'
-            plaid = plaid_stims[ stim]
-        for s in plaid: s.autoDraw = True
-        
-        if kb_cond == 'Kb':
-            current_keys = 0
-            current_percept = 0
-            percepts = []
-            perceptual_timeline = []
-            percept_duration = core.Clock()
+            trial['mu'] = mu
+            trial['sigma'] = sigma
+            # reset the timer for the waiting times
+            flip_timer.reset(t=0)
+        trial_start = True
+        needs_flip = True
 
-        """ TODO: show instructions here before the timers start ticking
+        # make the plaids autoDraw themselves as the window flips    
+        # for s in plaid: s.autoDraw = True
+
+        """ starting the actual trial
         """
+        trial_duration = random.uniform(40, 45)  # each trial lasts in between 40 and 45 seconds
+        trial['duration'] = trial_duration
+        trial_timer.reset(trial_duration)
 
-        """ Getting the timers started and get into the trial
-        """
-        exp.addData( 'trial.startTime', global_timer.getTime())  # choose one among these two logging methods ?
-        win.logOnFlip( level=logging.EXP, msg=trial['cond']) 
+        while trial_timer.getTime() > 0:  # add minimum number of transitions ? add max number of transitions ?
+            # check if we need to load a new simtulus
+            if flip_timer <= 0 and stim_cond == 'nAmb': 
+                # time to change the non-ambiguous plaid
+                needs_flip = True
+                stim = stims.sample_next_stim(stim)
+                # when do we change the next time ?
+                next_stim_change = utils.draw_next_waiting_time(mu, sigma)
+                flip_timer.reset(t=next_stim_change)
+            elif trial_start and stim_cond == 'Amb':
+                # only needs change if at start of trial
+                needs_flip = True
+                stim = 'Amb'
 
-        triggers.sendTrigger( triggers.trigger['condition'][ trial['cond']])  # send trigger to indicate a start of the trial condition
-        trial_timer.reset( duration)
-        if stim_cond == 'Amb':
-            triggers.sendTrigger( triggers.trigger['stimulus'][ stim])  # stim should be 'amb'
-
-        while timer.getTime() > 0:  # add minimum number of transitions ? add max number of transitions ?
-            # TODO
-            if stim_cond == 'nAmb' and flip_timer <= 0:  # time to change the non-ambiguous plaid
-                for s in plaid: s.autoDraw = False
-                stim = random.sample( nAmb_plaids - set( [stim]), 1)
-                stimChanges.append( ( global_timer.getTime(), stim))
+            if needs_flip:
+                # no flip in the next frame... unless flip_timer < 0
+                needs_flip = False
+                # desactivate old stimulus
+                if not trial_start:
+                    for s in plaid: s.autoDraw = False
+                # new stimulus
                 plaid = plaid_stims[stim]
+                # random phase for the new stimulus
+                if trial_start:
+                    plaid.phase = [0, random.uniform(0, 1)]
+                    trial['initial_phase'] = plaid.phase[1]
+                    trial_start = False
+                    # clear the percept buffer
+                    if kb_cond == 'Kp':
+                        pb = percepts.get_percept_report(io, clear=True)
+                        current_percept = pb[-1]
+                        percept_duration.reset()
+                        percept_ = 0
+                # send a trigger on next flip
+                win.callOnFlip(trigger.send, 'stimulus', stim, io)
+                # set autoDraw to True so we do not need explicit drawing
                 for s in plaid: s.autoDraw = True
-                flip_timer.reset( t=utils.draw_next_waiting_time( mu, sigma))  # time until next change; TODO : set mu, sigma
-                triggers.sendTrigger( triggers.trigger['stimulus'][ stim])
-            
-            if kb_cond == "Kb":  # keyboard press is registered
-                # key presses
-                new_keys = current_keys
-                key_pressed = kb.getKeys( ['right', 'left', 'up', 'esc'], waitRelease=False, clear=False)  # get keys pressed, do not clear key from buffer
-                keys = kb.getKeys( ['right', 'left', 'up', 'esc'], waitRelease=True)  # get keys released, clear key from buffer
-                new_percept = 0
-                if 'esc' in key_pressed:
-                    quit = input('Do you really want to quit? [Y]/[[N]]').upper()
-                    if quit == "Y":
-                        triggers.quit( 'interrupted')
-                for key in key_pressed:  # key is pressed
-                    # print(key.name, key.rt)
-                    new_keys |= utils.encode( key.name)  # use bitwise operations to check keycodes: key was or is pressed
-                    new_percept |= utils.encode( key.name)  # only newly added keypresses decode the new percept
-                for key in keys:  # key is released
-                    # print(key.name, key.rt, key.duration)
-                    new_keys &= ~utils.encode( key.name)  # use bitwise operations to check keycodes: key was pressed and is not released
-                if not new_keys == current_keys:
-                    percepts.append( ( global_timer.getTime(), new_keys))  
-                    triggers.sendTrigger( 80 + new_keys)  # send a trigger with keycode and offset 80 (keypress)
-                    print('{:03b}'.format(new_keys))
-                    current_keys = new_keys
 
-                    if not new_percept == current_percept:
-                        perc_dur = percept_duration.getTime()
-                        perceptual_timeline.append( ( global_timer.getTime(), current_percept, perc_dur))
-                        percept_duration.reset( )
-                        current_percept = new_percept
-                        if trial['cond'] == 'Amb_Kp' and new_percept:
-                            percept_times.append( perc_dur)
-
-                    if new_percept in {1, 2, 4}:
-                        print( 'Pure state {:s} ({:.1d}s)'.format( decode( new_percept), perc_dur))
-                    else:
-                        print( 'Mixed state {:03b} decoded as  ({:.1d}s'.format( new_keys, current_percept, ))
-
+            # update phase for continuous motion
             plaid.phase += velocity
+            
+            # will also cause triggers to be send
             win.flip()
 
-        exp.addData( 'trial.stims', stimChanges)
-        exp.addData( 'trial.percepts', percepts)
-        exp.addData( 'trial.perceptual_timeline', perceptual_timeline)
-        exp.nextEntry()  # going to the next trial
-        expInfo.saveAsPickle( Path(expInfo['metaData']['paths']['root'], ExpInfo['id'] + '_expInfo.psydat').resolve())  # save after each 
+            if kb_cond == "Kb":  # keyboard press is registered
+                new_percept = percepts.get_percept_report(io)[-1]
+                # if the perceptual state has changed, send a trigger
+                if not new_percept == current_percept:
+                    current_percept = new_percept
+                    trigger.send('keypress', current_percept.as_trigger(), io)
 
+        
+        # get the current list of percepts
+        pb = percepts.get_percept_report(io)
+        io.devices.keyboard.reporting = False
+        trial['percepts'] = [[p.perceptual_state, p.onset, p.duration] for p in pb]
+        
+        # make the perceptual timeline
+        pb_ = percepts.merge_percepts(pb)
+        # get the perceptual residence times, excluding the "0" percept
+        percept_times.extend([(p.as_perceptual_states, p.duration) for p in pb_ if p])
+
+        # flush log information after trial
+        logging.flush()
+        io.flushDataStoreFile()
+
+    # estimate mu and sigma from the percept_times    
     if not phase['name'] == 'learn':
-        mu, sigma = utils.loglikelihood_lognormal( percept_times)
+        # get the percept_times
+        mu, sigma = utils.loglikelihood_lognormal(percept_times)
 
-    exp.loopEnded( phase['trials'])
-    win.saveFrameIntervals( filename=Path( ExpInfo['metaData']['paths']['root'], ExpInfo['id'] + '_fi.log'), clear=True)
+    io.flushDataStoreFile()
+    # win.saveFrameIntervals(filename=Path(ExpInfo['metaData']['paths']['root'], ExpInfo['id'] + '_fi.log'), clear=True)
