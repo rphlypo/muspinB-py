@@ -3,6 +3,7 @@ from psychopy.tools.monitorunittools import deg2pix
 from math import sqrt, sin, cos, pi
 import numpy as np
 import utils
+import random
 
 
 def createPlaids(win, alpha, **plaid_params):  # use only for coherent
@@ -28,17 +29,12 @@ def createPlaids(win, alpha, **plaid_params):  # use only for coherent
         orientation of the gratings (± given orientation)
 
     :return:
-
-
-
     """
     I0 = 1  # contrast
     bkgcol = win.color # mean intensity 
 
     sf = plaid_params['sf']
     plaid_params.pop('sf')
-    win = plaid_params['win']
-    plaid_params.pop('win')
     dc = int(plaid_params['tex'][3:]) / 100
     plaid_params.pop('tex')
     plaid_params['opacity'] = 1
@@ -69,26 +65,38 @@ def createPlaids(win, alpha, **plaid_params):  # use only for coherent
     return bkg, grating
 
 
+def fixation(win):
+    bkgcol = win.color # mean intensity 
+    bkg = visual.Circle(win=win, size=12.7, lineWidth=0, fillColor=bkgcol, autoDraw=False)
+    circle = visual.Circle(win, size=2.5, lineWidth=0, lineColor=bkgcolor, fillColor=win.color, autoDraw=False)
+    fix_point = visual.Circle(win, size=2, units='pix', lineWidth=0, lineColor="black", fillColor="black", autoDraw=False)
+    return bkg, circle, fix_point
 
-def plaids( win, init_file):
+
+def plaids(win, alpha, ori, sf, dc, **kwargs):
     """ create different moving plaids for different conditions ambiguous, coherent, transparent-left, transparent-right 
 
     :Parameters:
 
-    win : psychopy.visual.Window
+    win: psychopy.visual.Window
         a psychopy window in which to draw the stimuli
 
-    init_file : str
-        path to the init file containing parameters such as alpha, ori and sf of the stimuli
-    """
+    alpha: dict
+        different transparency values
 
-    init = utils.load_init( init_file)
-    alphas = init['stim']['alpha']
-    ori = init['stim']['ori']
-    sf = init['stim']['sf']
+    ori: float
+        orientation of the gratings in degrees
+
+    sf: float
+        spatial frequency of the gratings
+
+    dc: float
+        duty cycle of the gratings
+    """
+    texture = 'sqr{:2d}'.format(dc)
 
     plaid_params = dict(
-        tex='sqr65',
+        tex=texture,
         mask='circle',
         blendmode='add', 
         sf=sf,
@@ -103,20 +111,25 @@ def plaids( win, init_file):
     circle = visual.Circle(win, size=2.5, lineWidth=0, lineColor=win.color, fillColor=win.color, autoDraw=False)
     fix_point = visual.Circle(win, size=2, units='pix', lineWidth=0, lineColor="black", fillColor="black", autoDraw=False)
 
-    
-
-    plaid_stims = dict( 
-        amb=createPlaids(win, [alphas['amb'], alphas['amb']], **plaid_params),
-        transpL=createPlaids(win, [alphas['transp'], 1-alphas['transp']], **plaid_params),
-        transpR=createPlaids(win, [1-alphas['transp'], alphas['transp']], **plaid_params),
-        coh=createPlaids(win, [alphas['coh'], alphas['coh']], **plaid_params)
+    plaid_stims = dict(
+        amb=createPlaids(win, [alpha['amb'], alpha['amb']], **plaid_params),
+        transpL=createPlaids(win, [alpha['transp'], 1-alpha['transp']], **plaid_params),
+        transpR=createPlaids(win, [1-alpha['transp'], alpha['transp']], **plaid_params),
+        coh=createPlaids(win, [alpha['coh'], alpha['coh']], **plaid_params)
         )
 
     for stim in plaid_stims:
-        plaid_stims[stim] = ( *plaid_stims[stim], circle, fix_point)
+        plaid_stims[stim] = (*plaid_stims[stim], circle, fix_point)
 
     return plaid_stims
 
 
-def transition():  # TODO: implement transition between stims
-    pass
+def sample_next_stim(current_stim=None, tm=None):  # TODO: implement transition between plaid_stims
+    if tm is None:
+        stim_set = list({'transpL', 'transpR', 'coh'} - set([current_stim]))
+        weights = None  
+    else:
+        # tm is a dictionary encoding the transition matrix
+        # tm['transpL'] = {'coh': 0.2, 'transpR':0.8}
+        stim_set, weights = zip(*[(k, v) for k, v in tm[current_stim].items()])
+    return random.choices(stim_set, weights, k=1)
