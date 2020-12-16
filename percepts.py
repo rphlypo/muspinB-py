@@ -7,15 +7,24 @@ except OSError:
 
 from typing import Callable
 from psychopy.core import getTime
+import numpy as np
 
 
 class Percept():
     percept_dict = {
-        'keys': {'left': 0b100, 'up': 0b010, 'right': 0b001},
-        'perceptual_states': {'transparent_left': 0b100, 'coherent': 0b010, 'transparent_right': 0b001}
+        'keys': {
+            'left': 0b100,
+            'up': 0b010,
+            'right': 0b001
+            },
+        'perceptual_states': {
+            'transparent_left': 0b100,
+            'coherent': 0b010,
+            'transparent_right': 0b001
+            }
     }
 
-    def __init__(self, perceptual_state: int=0, from_keys: bool=False, onset: float=None, end: float=None):
+    def __init__(self, perceptual_state: (int, 'Percept')=0, from_keys: bool=False, onset: float=None, end: float=None):
         if from_keys:
             self.perceptual_state = self.__from_keys(perceptual_state)
         elif hasattr(perceptual_state, '__iter__'):
@@ -112,6 +121,14 @@ class Percept():
     def as_perceptual_states(self):
         return self.__decode_states(mod='perceptual_states')
 
+    def as_trigger(self):
+        if not self.perceptual_state:
+            return 'nopercept'
+        else:
+            d = [(k, v) for k, v in self.percept_dict['keys'].items()]
+            d.sort(key=lambda x: x[1], reverse=True)
+            return '_'.join([x[0] for x in d if x[1] & self.perceptual_state])
+
     def as_keys(self):
         return self.__decode_states(mod='keys')
 
@@ -156,14 +173,19 @@ class Percept():
     def __int__(self):
         return self.perceptual_state
 
+    def __bool__(self):
+        return bool(self.perceptual_state)
+
     def __repr__(self):
         dur = '{}' if self.end is None else '{:.3f}s'
         t_on = '{}' if self.onset is None else '{:.3f}s'
-        return ('Percept({:03b}, onset=' + t_on + ' , duration=' + dur + ')').format(self.perceptual_state, self.onset, self.duration)
+        return ('Percept({:03b}, onset=' + t_on + ', duration=' + dur + ')').format(self.perceptual_state, self.onset, self.duration)
 
 
-def waitKeyPress(keyboard, key: (list,str)=None, timeout:float =60) -> bool:
-    
+def waitKeyPress(io, key: (list,str)=None, timeout:float =60) -> bool:
+    """ wait key (keyRelease) event to continue, if no key is given any key will do
+    """
+    io.devices.keyboard.reporting = True
     sTime = getTime()
 
     if not hasattr(key, '__iter__') or isinstance(key, str):
@@ -171,8 +193,9 @@ def waitKeyPress(keyboard, key: (list,str)=None, timeout:float =60) -> bool:
 
     while getTime() - sTime < timeout:
         try:
-            for e in keyboard.getEvents(clear=True):
+            for e in io.getEvents():
                 if type(e).__name__ == 'KeyboardReleaseEventNT' and (e.key in key or key is None):
+                    print('key {} released'.format(e.key))
                     raise StopIteration
         except StopIteration:
             break              
@@ -180,90 +203,109 @@ def waitKeyPress(keyboard, key: (list,str)=None, timeout:float =60) -> bool:
         print('timed out, continuing anyway...')
         return True  # left due to time-out
 
+    io.devices.keyboard.reporting = False
+    io.clearEvents('keyboard')
     return False  # left with keypress, i.e., without timing out
 
 
 def percept_report_buffering(f):
-    percept_buffer = [ Percept(0, onset=getTime())]
+    percept_buffer = [Percept(0, onset=getTime())]
 
     def wrapper(*args, clear: bool=False, **kwargs) -> Callable:   
         if clear:  # do not continue to fill the buffer, start a new one (useful when new trial is started)
             del percept_buffer[:]
             percept_buffer.append(Percept(0, onset=getTime()))
+            io.devices.keyboard.reporting = True
             
         kwargs['response'] = percept_buffer[-1].perceptual_state  # get the last (current) reponse
         responses = f(*args, **kwargs)
 
         if responses:
             percept_buffer.extend(responses)
-            percept_buffer.sort( key=lambda x:x.onset)
+            percept_buffer.sort(key=lambda x:x.onset)
 
-        for ix in range(len(percept_buffer) - 1):
-            percept_buffer[ix].end = percept_buffer[ix+1].onset
+        for p0, p1 in zip(percept_buffer[:-1], percept_buffer[1:]):
+            p0.end = p1.onset
 
         return percept_buffer
     return wrapper
 
 
 @percept_report_buffering
-def get_percept_report(keyboard:'keyboard', response: int):
+def get_percept_report(io:'keyboard', response: int = 0):
     keymap = {'up': 0b010, 'left': 0b100, 'right': 0b001}
     responses = []
     
-    for e in keyboard.getEvents(clear=True):
-        if type(e).__name__ == 'KeyboardPressEventNT':  # is returned as namedtuple
-            # print('{} has been pressed at {}s'.format(e.key, e.time))  # should transform to logging statement
-            try:
+    for e in io.getEvents():
+        try:
+            if type(e).__name__ == 'KeyboardPressEventNT':  # is returned as namedtuple
+                print('{} has been pressed at {}s'.format(e.key, e.time))  # should transform to logging statement
                 response |= keymap[e.key]
-            except KeyError:
-                print('Key [{}] pressed, not handled properly'.format(e.key))  # handle with logging (warning)
-        elif type(e).__name__ == 'KeyboardReleaseEventNT':  # is returned as namedtuple
-            #  print('{} has been released at {}s'.format(e.key, e.time))  # should transform to logging statement
-            try:
+            elif type(e).__name__ == 'KeyboardReleaseEventNT':  # is returned as namedtuple
+                print('{} has been released at {}s'.format(e.key, e.time))  # should transform to logging statement
                 response &= ~keymap[e.key]
-            except KeyError:
-                print('Key [{}] pressed, not handled properly'.format(e.key))  # handle with logging (warning)
+            # if not response == old_response:
+            responses.append(Percept(response, onset=e.time))
+            #    old_response = response
+        except KeyError:
+            print('Key [{}] pressed, not handled properly'.format(e.key))  # handle with logging (warning)          
 
-        # print('{:03b}'.format(response))  # transform to logging statement
-
-        responses.append(Percept(response, onset=e.time))
+    io.clearEvents('keyboard')
     return responses
 
 
+def merge_percepts(percept_list):
+    plist = []
+    # do not take last percept which has not ended
+    for p in percept_list[:-1]:
+        if not plist:
+            plist.append(p)
+        else:
+            if p == plist[-1]:
+                plist[-1].end = p.end
+            else:
+                new_p = p - plist[-1]
+                if new_p:
+                    plist.append(Percept(new_p, onset=p.onset, end=p.end))
+                else:
+                    plist.append(p)
+    return plist
+
+
 if __name__=='__main__':
-    from psychopy import iohub, visual
-    from psychopy.iohub import devices
+    from psychopy import iohub, visual, clock
+    from psychopy.iohub import devices, client
+
+    # launch a win instance to intercept the keypresses 
+    # so that they are not sent to the console
+    win = visual.Window()
 
     # Start the ioHub process. 'io' can now be used during the
-    # experiment to access iohub devices and read iohub device events.
-    io = iohub.launchHubServer()
-
-    kb = io.devices.keyboard
-    kb.reporting = True  
-    win = visual.Window()  # intercepts the keypresses so that they are not sent to the console
-
+    # experiment to access iohub devices and read iohub device events
+    io = client.launchHubServer()
+    io.devices.mouse.reporting = False
 
     print('Press [SPACE] to continue... ')
-    waitKeyPress(kb, key=' ', timeout=10)
+    waitKeyPress(io, key=' ', timeout=10)
 
-    print('press arrow keys')
-    for i in range(120):
-        win.flip()
-        pb = get_percept_report(kb)
-    print (pb)
+    all_percepts = []
+    trial_timer = clock.CountdownTimer(start=3)
 
-    print('press arrow keys')
-    for i in range(120):
+    pb = get_percept_report(io, clear=True)
+    current_percept = pb[-1]
+
+    while trial_timer.getTime()>0:
+        print(trial_timer.getTime())
         win.flip()
-        pb = get_percept_report(kb)
+    
+    pb = get_percept_report(io)
+    io.devices.keyboard.reporting = False
+    print('Trial ended')
+
     print(pb)
+    pb = merge_percepts(pb)
+    for p in pb:
+        print(p)
 
-    get_percept_report(kb, clear=True)
-    print('press arrow keys')
-    for i in range(120):
-        win.flip()
-        pb = get_percept_report(kb)
-    print(pb)
-
-    # Stop the ioHub Server
-    io.quit()
+    print('Press [q] to quit... ')
+    waitKeyPress(io, key='q', timeout=60)
