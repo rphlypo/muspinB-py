@@ -101,6 +101,11 @@ class MarkovRenewalProcess():
         for k, v in surv_t.items():
             ix = self._ix[k]
             # do not update if no samples are observed
+            # alternative, we may multiply
+            #  the current estimator by alpha 
+            # and the newly obtained estimator by (1 - alpha)
+            # this would allow to forget the past trials at a "constant" rate
+            # (not taking into account variance of the estimators)
             if n[ix] - m[ix] > 0:
                 self.__mu[ix] = (self.__mu[ix] * m[ix] + np.array(v).sum()) / n[ix]
                 self.__S2[ix] = (self.__S2[ix] * m[ix] + (np.array(v) ** 2).sum()) / n[ix]
