@@ -199,7 +199,8 @@ def init(init_file=None):
         session_id, subject_path = utils.register_subject(datapath=init['data']['path'], modalities=init['modalities'])  
     else:
         session_id = 'tmp'
-        subject_path = Path.cwd().mkdir('subject_data')
+        subject_path = Path(Path.cwd(), 'subject_data')
+        subject_path.mkdir()
 
     shutil.copy(init_file, Path(subject_path).joinpath(session_id + '_init.yaml'))
     ioHub_config['session_code'] = session_id
