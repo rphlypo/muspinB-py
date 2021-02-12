@@ -11,19 +11,26 @@ def all_true(logical_list):
 
 
 class MarkovRenewalProcess():
-    def __init__(self, states):
+    def __init__(self, states, tm=None, mu=None, sigma=None):
         self.states = states
         k = len(self.states)
-        tm = np.full((k, k), 1/(k-1))
-        tm.flat[::k+1] = 0  # put diagonal to zero
+        if tm is None:
+            tm = np.Zeros((k, k))
+        elif tm == 'uniform':
+            tm = np.full((k, k), 1/(k-1))
+            tm.flat[::k+1] = 0  # put diagonal to zero
         self.__transition_matrix = tm
         self.__survival_times = {
             state: lognorm(s=np.sqrt(np.log(1+2/3**2)), loc=0, scale=np.log(3)-np.log(1+2/3**2)/2) for state in self.states 
         }
         # init the parameters for training
         self.__comx = np.zeros((k, k), dtype=np.uint)
-        self.__mu = np.zeros((k, ))
-        self.__S2 = np.zeros((k, ))
+        if mu is None:
+            mu = np.zeros((k, ))
+        self.__mu = mu
+        if sigma is None:
+            sigma = np.zeros((k, ))
+        self.__S2 = sigma ** 2 + mu ** 2
         
     @property
     def states(self):
@@ -121,7 +128,7 @@ class MarkovRenewalProcess():
         return self.surival_times[state].rvs()
 
     def transition(self, state):
-        return np.random.choice(self.states, p=self.__transition[self._ix[state]])
+        return np.random.choice(self.states, p=self.__transition_matrix[self._ix[state]])
 
     def sample(self, t):
         steady_state = self.steady_state
