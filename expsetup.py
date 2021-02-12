@@ -207,12 +207,12 @@ def init(init_file=None):
     ioHub_config['data_store'].update(dict(
                 enable = True,
                 filename = session_id,
-                parent_dir = subject_path
+                parent_dir = str(subject_path)  # serialisation of json strings requires casting to string
             ))
     logfile = Path(subject_path).joinpath(session_id + '_log.tsv')
     triggerfile = Path(subject_path).joinpath(session_id + '_triggers.tsv')
-    ioHub_config['session_info']['user_variables']['logfile'] = logfile
-    ioHub_config['session_info']['user_variables']['triggerfile'] = triggerfile
+    ioHub_config['session_info']['user_variables']['logfile'] = str(logfile)
+    ioHub_config['session_info']['user_variables']['triggerfile'] = str(triggerfile)
 
     # setting up the eye-tracker
     if 'GAZE' in [m.upper() for m in init['experiment']['modalities']]:
