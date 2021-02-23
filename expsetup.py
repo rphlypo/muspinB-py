@@ -230,7 +230,7 @@ def init(init_file=None):
     conditions = [
         dict(
             cond='nAmb_nKp',
-            img='img/noPRESS.jpg',
+            img='img/NoPRESS.jpg',
          ),
          dict(
              cond='nAmb_Kp',
@@ -238,7 +238,7 @@ def init(init_file=None):
          ),
          dict(
              cond='Amb_nKp',
-             img='img/noPRESS.jpg',
+             img='img/NoPRESS.jpg',
          ),
          dict(
              cond='Amb_Kp',
