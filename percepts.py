@@ -208,17 +208,17 @@ def waitKeyPress(io, key: (list,str)=None, timeout:float =60) -> bool:
     return False  # left with keypress, i.e., without timing out
 
 
-def percept_report_buffering(f):
+def percept_report_buffering(f, **kwargs):
     percept_buffer = [Percept(0, onset=getTime())]
 
-    def wrapper(*args, clear: bool=False, **kwargs) -> Callable:   
+    def wrapper(io, *args, clear: bool=False, **kwargs) -> Callable:   
         if clear:  # do not continue to fill the buffer, start a new one (useful when new trial is started)
             del percept_buffer[:]
             percept_buffer.append(Percept(0, onset=getTime()))
             io.devices.keyboard.reporting = True
             
         kwargs['response'] = percept_buffer[-1].perceptual_state  # get the last (current) reponse
-        responses = f(*args, **kwargs)
+        responses = f(io, *args, **kwargs)
 
         if responses:
             percept_buffer.extend(responses)
@@ -273,8 +273,8 @@ def merge_percepts(percept_list):
 
 
 if __name__=='__main__':
-    from psychopy import iohub, visual, clock
-    from psychopy.iohub import devices, client
+    from psychopy import visual, clock
+    from psychopy.iohub import client
 
     # launch a win instance to intercept the keypresses 
     # so that they are not sent to the console
@@ -295,7 +295,6 @@ if __name__=='__main__':
     current_percept = pb[-1]
 
     while trial_timer.getTime()>0:
-        print(trial_timer.getTime())
         win.flip()
     
     pb = get_percept_report(io)
