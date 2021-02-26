@@ -138,7 +138,7 @@ def init(init_file=None):
         screen=1,  # 0 is the monitor of the experiment control
         fullscr=True, 
         allowGUI=False,
-        blendmode='add',  
+        blendMode='add',  
         waitBlanking=False, 
         winType='pyglet')  # for iohub to function well
 
