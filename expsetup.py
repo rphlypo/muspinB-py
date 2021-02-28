@@ -22,6 +22,7 @@ from psychopy.tools.typetools import float_uint8
 
 def makeMonitor(monitor_constants):
     """ 
+    :param monitor_constants: a dict with the following keys:
     :param name: name of the monitor, useful to recall settings or to override existing settings
     :param res: resolution in pixels; list containing [width, height]
     :param diag: diagonal of the screen [inch]
@@ -138,7 +139,6 @@ def init(init_file=None):
         screen=1,  # 0 is the monitor of the experiment control
         fullscr=True, 
         allowGUI=False,
-        blendMode='add',  
         waitBlanking=False, 
         winType='pyglet')  # for iohub to function well
 
