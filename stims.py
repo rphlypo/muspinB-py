@@ -6,7 +6,7 @@ import utils
 import random
 
 
-def createPlaids(win, alpha, **plaid_params):  # use only for coherent
+def createPlaids(win, alpha, normalise=True, **plaid_params):  # use only for coherent
     """ plaids are created in true transparency (multiplicative)
     :Parameters:
 
@@ -57,7 +57,9 @@ def createPlaids(win, alpha, **plaid_params):  # use only for coherent
                     np.logical_or(Y>1-h+X, Y<-1+h+X)), alpha[1], 1)
 
     transp_mean = dc ** 2 * alpha[0] * alpha[1] + (1 - dc) ** 2 + dc * (1 - dc) * (alpha[0] + alpha[1])
-    grating = (grating_r * grating_l - transp_mean) / (1 - alpha[0] * alpha[1])
+    grating = grating_r * grating_l
+    if normalise:
+        grating = (grating - transp_mean) / (1 - alpha[0] * alpha[1])
     
     bkg = visual.Circle(win=win, size=12.7, lineWidth=0, fillColor=bkgcol, autoDraw=False)
     grating = visual.GratingStim(win=win, tex=grating, sf=(sf/2/sin(angle), sf/2/cos(angle)), **plaid_params)
