@@ -6,7 +6,7 @@ import utils
 import random
 
 
-def createPlaids(win, alpha, normalise=True, **plaid_params):  # use only for coherent
+def createPlaids(win, alpha, I0=1, normalise=True, **plaid_params):  # use only for coherent
     """ plaids are created in true transparency (multiplicative)
     :Parameters:
 
@@ -15,6 +15,12 @@ def createPlaids(win, alpha, normalise=True, **plaid_params):  # use only for co
 
     alpha : float
         transparency level
+
+    I0 : float [0, 1]
+        background intensity
+
+    normalise : bool
+        whether or not to normalise intensity values for mean and contrast
 
     sf : float
         spatial frequency in deg^-1
@@ -30,7 +36,6 @@ def createPlaids(win, alpha, normalise=True, **plaid_params):  # use only for co
 
     :return:
     """
-    I0 = 1  # contrast
     bkgcol = win.color # mean intensity 
 
     sf = plaid_params['sf']
@@ -57,7 +62,7 @@ def createPlaids(win, alpha, normalise=True, **plaid_params):  # use only for co
                     np.logical_or(Y>1-h+X, Y<-1+h+X)), alpha[1], 1)
 
     transp_mean = dc ** 2 * alpha[0] * alpha[1] + (1 - dc) ** 2 + dc * (1 - dc) * (alpha[0] + alpha[1])
-    grating = grating_r * grating_l
+    grating = I0 * grating_r * grating_l
     if normalise:
         grating = (grating - transp_mean) / (1 - alpha[0] * alpha[1])
     
