@@ -8,6 +8,7 @@ except OSError:
 from typing import Callable
 from psychopy.core import getTime
 import numpy as np
+import csv
 
 
 class Percept():
@@ -270,6 +271,28 @@ def merge_percepts(percept_list):
                 else:
                     plist.append(p)
     return plist
+
+
+def save_percepts(percepts, filename):
+    """ save percepts to a csv file
+    """
+    percept_list = [[p.perceptual_state, p.onset, p.end] for p in percepts]
+    with open(filename, 'w') as csv_file:
+        csv_writer = csv.writer(csv_file, delimiter=',', quoting=csv.QUOTE_NONNUMERIC)
+        for p in percept_list:
+            csv_writer.writerow(p)
+
+
+def load_percepts(filename):
+    """ load percepts from a csv file
+    """
+    percept_list = []
+    with open(filename, 'r') as csv_file:
+        csv_reader = csv.reader(csv_file, delimiter=',', quoting=csv.QUOTE_NONNUMERIC)
+        for line in csv_reader:
+            print(line)
+            percept_list.append(Percept(perceptual_state=line[0], onset=line[1], end=line[2] if not isinstance(line[2], str) else None))
+    return percept_list
 
 
 if __name__=='__main__':
