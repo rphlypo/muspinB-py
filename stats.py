@@ -13,7 +13,7 @@ def all_true(logical_list):
 class MarkovRenewalProcess():
     """ Markov renewal process
     - the transition matrix has entries [j][i] which is the probablity of next=j given current=i
-    - the waiting times are log-normal distributed
+    - the residence times are log-normal distributed
     """
     def __init__(self, states, tm=None, mu=None, sigma=None, m=None):
         self.states = states
@@ -137,11 +137,17 @@ class MarkovRenewalProcess():
     def transition(self, state):
         return np.random.choice(self.states, p=self.transition_matrix[self._ix[state]])
 
-    def sample(self, t):
+    def sample(self, t, initial_state=None):
         steady_state = self.steady_state
 
         t_ = 0
-        s = np.random.choice(self.states, p=steady_state)
+        if initial_state is not None:
+            if initial_state in self.states:
+                s = initial_state
+            else:
+                raise ValueError('No state "{}"'.format(initial_state))
+        else:
+            s = np.random.choice(self.states, p=steady_state)
 
         samples = []
         tm = self.transition_matrix
