@@ -15,7 +15,7 @@ class MarkovRenewalProcess():
     - the transition matrix has entries [j][i] which is the probablity of next=j given current=i
     - the waiting times are log-normal distributed
     """
-    def __init__(self, states, tm=None, mu=None, sigma=None):
+    def __init__(self, states, tm=None, mu=None, sigma=None, m=None):
         self.states = states
         k = len(self.states)
         # init the parameters for training
@@ -24,7 +24,7 @@ class MarkovRenewalProcess():
         elif tm == 'uniform':
             tm = np.ones((k, k))
             tm.flat[::k+1] = 0
-        self.__comx = tm
+        self.__comx = tm    
         if sigma is None:
             sigma = np.zeros((k, ))
         if mu is None:
@@ -44,22 +44,22 @@ class MarkovRenewalProcess():
         return self.__comx / self.__comx.sum(axis=0, keepdims=True)
 
     @property
-    def survival_times(self):
-        # base the survival times upon the parameters mu and sigma
+    def residence_times(self):
+        # base the residence times upon the parameters mu and sigma
         return {state: lognorm(s=self.s[self._ix[state]], loc=0, scale=self.scale[self._ix[state]]) for state in self.states}
 
     @property
     def sigma(self):
-        """ second moments for each of the states' survival times
+        """ second moments for each of the states' residence times
         based on self.n samples
         """
-        return [np.sqrt(rv.stats(moments='v')) for rv in self.survival_times.values()]
+        return [np.sqrt(rv.stats(moments='v')) for rv in self.residence_times.values()]
 
     @property
     def mu(self):
-        """ first moments for each of the states' survival times
+        """ first moments for each of the states' residence times
         """
-        return [rv.stats(moments='m') for rv in self.survival_times.values()]
+        return [rv.stats(moments='m') for rv in self.residence_times.values()]
 
     @property
     def comx(self):
@@ -88,17 +88,17 @@ class MarkovRenewalProcess():
         w, v = np.linalg.eig(self.transition_matrix)
         ix = np.argmax(np.real(w))
         steady_state = np.real(v[:, ix])
-        for ix, st in enumerate(self.survival_times.values()):
+        for ix, st in enumerate(self.residence_times.values()):
             steady_state[ix] = steady_state[ix] * st.stats(moments='m')  # steady_state[ix] = steady_state[ix] * self.mu[ix] 
         return steady_state / steady_state.sum()
 
     def train(self, X):
         """ X comes as a list of tuples (state, duration)
         for a specific element that has no duration, it is not used to update the estimate 
-        of the survival_times, but is used as an "end-state" (previous transition is taken
+        of the residence_times, but is used as an "end-state" (previous transition is taken
         into account, not the next one)
         """
-        # survival times
+        # residence times
         surv_t = {
             s: [] for s in self.states
         }
@@ -110,7 +110,7 @@ class MarkovRenewalProcess():
         for x, y in zip(X[:-1], X[1:]):  
             if x[1] is not None:
                 # only if the current state has a duration will we look at
-                # - current survival time
+                # - current residence time
                 # - transition to next state
                 surv_t[x[0]].append(np.log(x[1]))
                 self.__comx[self._ix[y[0]], self._ix[x[0]]] += 1
@@ -132,7 +132,7 @@ class MarkovRenewalProcess():
                 self.__S2[ix] = (self.__S2[ix] * m[ix] + (np.array(v) ** 2).sum()) / n[ix]
 
     def sample_time(self, state):
-        return self.survival_times[state].rvs()
+        return self.residence_times[state].rvs()
 
     def transition(self, state):
         return np.random.choice(self.states, p=self.transition_matrix[self._ix[state]])
@@ -145,7 +145,7 @@ class MarkovRenewalProcess():
 
         samples = []
         tm = self.transition_matrix
-        st = self.survival_times
+        st = self.residence_times
 
         while t_ < t:
             tau = st[s].rvs()
@@ -161,7 +161,7 @@ if  __name__ == '__main__':
     states = ['coherent', 'transparent_left', 'transparent_right']
     mrp_model = MarkovRenewalProcess(states, tm='uniform', mu=np.full((len(states), ), 3.), sigma=np.full((len(states), ), 1.))
 
-    for k, v in mrp_model.survival_times.items():
+    for k, v in mrp_model.residence_times.items():
         print('{}: mean={}, std={}'.format(k, v.stats(moments='m'), np.sqrt(v.stats(moments='v'))))
 
     print('transition matrix = \n{}\n'.format(mrp_model.transition_matrix))
@@ -175,7 +175,7 @@ if  __name__ == '__main__':
         print('training phase {i} on {n} extra samples'.format(i=ix+1, n = len(sample)))
         mrp.train([(s[0], s[2]) for s in sample])
 
-        for k, v in mrp.survival_times.items():
+        for k, v in mrp.residence_times.items():
             print('{}: mean={}, std={}'.format(k, v.stats(moments='m'), np.sqrt(v.stats(moments='v'))))
 
         print('transition matrix = \n{}\n'.format(mrp.transition_matrix))
