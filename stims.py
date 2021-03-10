@@ -1,8 +1,7 @@
 from psychopy import visual
 from psychopy.tools.monitorunittools import deg2pix
-from math import sqrt, sin, cos, pi
+from math import sin, cos, pi, tan, atan
 import numpy as np
-import utils
 import random
 
 
@@ -13,8 +12,8 @@ def createPlaids(win, alpha, I0=1, normalise=True, **plaid_params):  # use only 
     win : window
         the window in which they will be drawn
 
-    alpha : float
-        transparency level
+    alpha : tuple of 2 floats [0, 1]×[0, 1]
+        transparency levels
 
     I0 : float [0, 1]
         background intensity
@@ -67,7 +66,7 @@ def createPlaids(win, alpha, I0=1, normalise=True, **plaid_params):  # use only 
         grating = (grating - transp_mean) / (1 - alpha[0] * alpha[1])
     
     bkg = visual.Circle(win=win, size=12.7, lineWidth=0, fillColor=bkgcol, autoDraw=False)
-    grating = visual.GratingStim(win=win, tex=grating, sf=(sf/2/sin(angle), sf/2/cos(angle)), **plaid_params)
+    grating = visual.GratingStim(win=win, tex=grating, sf=(sf*cos(angle), sf*sin(angle)), **plaid_params)
 
     return bkg, grating
 
@@ -140,3 +139,13 @@ def sample_next_stim(current_stim=None, tm=None):  # TODO: implement transition 
         # tm['transpL'] = {'coh': 0.2, 'transpR':0.8}
         stim_set, weights = zip(*[(k, v) for k, v in tm[current_stim].items()])
     return random.choices(stim_set, weights, k=1)
+
+
+def get_velocity_vector(vel=1, ori=0, **kwargs):
+    """ takes stim parameters as input (as defined through the init.yaml) and returns the velocity vector
+    :param vel: positive float
+                velocity (perpendicular to the wavefront) in visual degrees per second
+    :param ori: float
+                angle in degrees of the wavefront with respect to the vertical axes
+    """
+    return [0, -atan(tan(vel*pi/180)/sin(ori*pi/180))*180/pi]

@@ -5,7 +5,7 @@ import utils
 import stims
 import expsetup
 import numpy as np
-
+from math import sin
 
 
 # settuing up the plaids
@@ -27,7 +27,7 @@ win = visual.Window(
     waitBlanking=False, 
     winType='pyglet')  # for iohub to function well
 # getting the stims
-velocity = np.array([0, -init['experiment']['stim']['vel']])
+velocity = np.array(stims.get_velocity_vector(**init['experiment']['stim']))
 plaid_stims = stims.plaids(win, **init['experiment']['stim'])
 plaid = plaid_stims['amb']
 for s in plaid: s.autoDraw = True
@@ -41,7 +41,7 @@ print('Press [SPACE] to continue... ')
 percepts.waitKeyPress(io, key=' ', timeout=10)
 
 all_percepts = []
-trial_timer = clock.CountdownTimer(start=3)
+trial_timer = clock.CountdownTimer(start=10)
 
 pb = percepts.get_percept_report(io, clear=True)
 current_percept = pb[-1]
@@ -58,10 +58,8 @@ pb = percepts.get_percept_report(io)
 io.devices.keyboard.reporting = False
 print('Trial ended')
 
-print(pb)
 pb = percepts.merge_percepts(pb)
-for p in pb:
-    print(p)
+print(pb)
 
 print('Press [q] to quit... ')
 percepts.waitKeyPress(io, key='q', timeout=60)
