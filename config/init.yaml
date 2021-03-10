@@ -56,9 +56,9 @@ experiment:
         # dutycycle: int (%)
         dc: 65
         # orientation of gratings: float (deg)
-        ori: 30
+        ori: 15
         # velocity: float (deg)
-        vel: 1
+        vel: 0.25
         # spatial frequency: float
         sf: 0.33333
 data:
