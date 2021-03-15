@@ -26,14 +26,19 @@ win = visual.Window(
     allowGUI=False,  
     waitBlanking=False, 
     winType='pyglet')  # for iohub to function well
-# getting the stims
+# getting the stims and its parameters
 velocity = np.array(
     [0,
      -stims.get_velocity_vector(**init['experiment']['stim'])[1]]
     )
 plaid_stims = stims.plaids(win, **init['experiment']['stim'])
 plaid = plaid_stims['amb']
-for s in plaid: s.autoDraw = True
+for s in plaid[:-3]: s.autoDraw = True
+dots = stims.createDots(win)
+dots.coherence = .7
+dots.dir = -90
+dots.autoDraw = True
+for s in plaid[-3:]: s.autoDraw = True
 
 # Start the ioHub process. 'io' can now be used during the
 # experiment to access iohub devices and read iohub device events
@@ -54,6 +59,11 @@ new_time = trial_timer.getTime()
 while trial_timer.getTime()>0:
     old_time = new_time
     new_time = trial_timer.getTime()
+    if dots.dir in [-90, 90]:
+        dots_vel = stims.get_velocity_vector(vel_units='deg', **init['experiment']['stim'])[1]
+    elif dots.dir in [0, 180]:
+        dots_vel = stims.get_velocity_vector(vel_units='deg', **init['experiment']['stim'])[0]
+    dots.speed =  dots_vel * (new_time - old_time)  # speed in °/frame
     plaid[1].phase += velocity * (new_time - old_time)
     win.flip()
 

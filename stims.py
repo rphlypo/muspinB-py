@@ -55,12 +55,12 @@ def createPlaids(win, alpha, I0=1, normalise=True, **plaid_params):  # use only 
     # this represents a square pattern that can be used as a texture (X-like pattern)
     grating_r = np.where(np.logical_or(
                     np.logical_and(Y>1-h-X, Y<1+h-X),
-                    np.logical_or(Y>2-h-X, Y<h-X)), alpha[0], 1)
+                    np.logical_or(Y>2-h-X, Y<h-X)), 1, alpha[0])
     grating_l = np.where(np.logical_or(
                     np.logical_and(Y>-h+X, Y<h+X),
-                    np.logical_or(Y>1-h+X, Y<-1+h+X)), alpha[1], 1)
+                    np.logical_or(Y>1-h+X, Y<-1+h+X)), 1, alpha[1])
 
-    transp_mean = dc ** 2 * alpha[0] * alpha[1] + (1 - dc) ** 2 + dc * (1 - dc) * (alpha[0] + alpha[1])
+    transp_mean = (1 - dc) ** 2 * alpha[0] * alpha[1] + dc ** 2 + dc * (1 - dc) * (alpha[0] + alpha[1])
     grating = I0 * grating_r * grating_l
     if normalise:
         grating = (grating - transp_mean) / (1 - alpha[0] * alpha[1])
@@ -71,11 +71,29 @@ def createPlaids(win, alpha, I0=1, normalise=True, **plaid_params):  # use only 
     return bkg, grating
 
 
+def createDots(win, coherence=0.5, nDots=100):
+    ''' Create RDK within a circular aperture to overlay on the plaids
+    :Parameters:
+
+    dir: direction in degrees, 0° is left-right, 90° is down-up
+
+    '''
+    dp = dict(fieldShape='circle',
+              fieldSize=12.7,
+              signalDots='same',
+              noiseDots='walk',
+              dotSize=3,
+              dotLife=30)
+    dp['nDots'] = nDots
+    dots = visual.DotStim(win, opacity=0.7, units='deg', **dp)
+    return dots
+
+
 def fixation(win):
     bkgcol = win.color # mean intensity 
     bkg = visual.Circle(win=win, size=12.7, lineWidth=0, fillColor=bkgcol, autoDraw=False)
     circle = visual.Circle(win, size=2.5, lineWidth=0, lineColor=bkgcolor, fillColor=win.color, autoDraw=False)
-    fix_point = visual.Circle(win, size=2, units='pix', lineWidth=0, lineColor="black", fillColor="black", autoDraw=False)
+    fix_point = visual.Circle(win, size=4, units='pix', lineWidth=0, lineColor="black", fillColor="black", autoDraw=False)
     return bkg, circle, fix_point
 
 
@@ -141,11 +159,19 @@ def sample_next_stim(current_stim=None, tm=None):  # TODO: implement transition 
     return random.choices(stim_set, weights, k=1)
 
 
-def get_velocity_vector(vel=1, ori=0, **kwargs):
+def get_velocity_vector(vel=1, ori=0, sf=1, vel_units='cycle',**kwargs):
     """ takes stim parameters as input (as defined through the init.yaml) and returns the velocity vector
     :param vel: positive float
                 velocity (perpendicular to the wavefront) in visual degrees per second
     :param ori: float
                 angle in degrees of the wavefront with respect to the vertical axes
     """
-    return [0, -atan(tan(vel*pi/180)/sin(ori*pi/180))*180/pi]
+    ori_rad = ori*pi/180
+    vel_rad = vel*pi/180
+    if vel_units == 'cycle':
+        dots_vel = [atan(tan(vel_rad)/cos(ori_rad))*180/pi*cos(ori_rad)*sf,
+                    atan(tan(vel_rad)/sin(ori_rad))*180/pi*sin(ori_rad)*sf]
+    elif vel_units == 'deg':
+        dots_vel = [atan(tan(vel_rad)/cos(ori_rad))*180/pi,
+                    atan(tan(vel_rad)/sin(ori_rad))*180/pi]
+    return dots_vel
