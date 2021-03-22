@@ -44,7 +44,7 @@ def makeMonitor(monitor_constants):
     if 'viewing_distance' in monitor_constants:
         mon.setDistance(monitor_constants['viewing_distance'])  # distance to monitor in cm
 
-    print('Using monitor {mon:s} of {diag:d}" {pix_w:d}×{pix_h:d} pixels, viewed at a distance of {dist:d} cm'.format(
+    print('Using monitor {mon:s} of {diag:.1f}" {pix_w:d}×{pix_h:d} pixels, viewed at a distance of {dist:d} cm'.format(
         mon=mon.name,
         diag=mon.getNotes()['diag'],
         pix_w=mon.getSizePix()[0],
