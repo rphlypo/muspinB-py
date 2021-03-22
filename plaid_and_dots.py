@@ -8,7 +8,7 @@ import numpy as np
 
 
 # setting up the plaids
-init = utils.load_init('./config/init.yaml') 
+init = utils.load_init('./config/init_laptop.yml') 
 # get the stim parameters
 stim_params = init['experiment']['stim']
 # launch a win instance to intercept the keypresses 
@@ -39,31 +39,31 @@ velocity = np.array([0, -v_y * sf_y])
 # the actual plaids stimulus
 plaid_stims = stims.plaids(win, **stim_params)
 plaid = plaid_stims['amb']
-for s in plaid: s.autoDraw = True
 
 # the superimposed RDK
 dots = stims.createDots(
     win,
     [stim_params['alpha']['amb']]*2, 
     stim_params['dc'],
-    nDots=100,
-    I0=stim_params['I0'])
-dots.coherence = 1
+    nDots=200,
+    I0=1)
+dots.coherence = .1
 dots.dir = 15
 dots_velocity = lambda x: stims.get_angular_velocity(
     x, stim_params['vel'], stim_params['ori'])
-dots.autoDraw = True
 
 # the fixation disk
 fix_disk = stims.fixation_disk(win)
-for s in fix_disk: s.autoDraw = True
 
 # Start the ioHub process. 'io' can now be used during the
 # experiment to access iohub devices and read iohub device events
 io = client.launchHubServer()
 io.devices.mouse.reporting = False
 
-print('Press [SPACE] to continue... ')
+msg = 'Press [SPACE] to continue... '
+print(msg)
+visual.TextStim(win, msg, color=stim_params['I0']).draw()
+win.flip()
 percepts.waitKeyPress(io, key=' ', timeout=10)
 
 all_percepts = []
@@ -74,6 +74,11 @@ current_percept = pb[-1]
 
 new_time = trial_timer.getTime()
 current_dir = 0
+
+
+for s in plaid: s.autoDraw = True
+dots.autoDraw = True
+for s in fix_disk: s.autoDraw = True
 
 while trial_timer.getTime()>0:
     old_time = new_time
@@ -103,5 +108,12 @@ print('Trial ended')
 pb = percepts.merge_percepts(pb)
 print(pb)
 
-print('Press [q] to quit... ')
+for s in plaid: s.autoDraw = False
+dots.autoDraw = False
+for s in fix_disk: s.autoDraw = False
+
+msg = 'Press [q] to quit... '
+print(msg)
+visual.TextStim(win, msg, color=stim_params['I0']).draw()
+win.flip()
 percepts.waitKeyPress(io, key='q', timeout=60)
