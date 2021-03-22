@@ -50,16 +50,18 @@ experiment:
     stim:
         # transparency: floats
         alpha:
-            amb: 0.95
-            coh: 0.4
+            amb: 0.3
+            coh: 0.8
             transp: 0.2
-        # dutycycle: int (%)
-        dc: 65
+        # contrast: float ([0, 1])
+        I0: 0.2
+        # dutycycle: int ([0, 1])
+        dc: 0.35
         # orientation of gratings: float (deg)
         ori: 15
         # velocity: float (deg)
-        vel: 0.25
-        # spatial frequency: float
+        vel: 1
+        # spatial frequency: float (s/deg)
         sf: 0.33333
 data:
     # path: path str
