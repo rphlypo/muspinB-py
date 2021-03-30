@@ -8,7 +8,7 @@ import numpy as np
 
 
 # setting up the plaids
-init = utils.load_init('./config/init_laptop.yml') 
+init = utils.load_init('./config/init.yaml') 
 # get the stim parameters
 stim_params = init['experiment']['stim']
 # launch a win instance to intercept the keypresses 
@@ -26,31 +26,40 @@ win = visual.Window(
     fullscr=True, 
     allowGUI=False,  
     waitBlanking=False, 
+    allowStencil=True,
     winType='pyglet')  # for iohub to function well
 
+aperture = visual.Aperture(win, size=20)
+aperture.units='deg'
 
 # velocity is upward, computed from the oblique velocity vector
 # this velocity is in periods/s 
 # the velocity is thus relatif to the vertical period which is 1/(sin(theta)*sf) [deg]
-sf_y = stim_params['sf'] * np.sin(stims._deg2rad(stim_params['ori']))
-v_y = stims.get_angular_velocity(-90, stim_params['vel'], stim_params['ori'])
-velocity = np.array([0, -v_y * sf_y])
+vel_ori = -90
+
+sf_x = stims.get_angular_frequency(0, stim_params['sf'], stim_params['ori'])
+sf_y = stims.get_angular_frequency(90, stim_params['sf'], stim_params['ori'])
+v_y = stims.get_angular_velocity(90, stim_params['vel'], stim_params['ori'])
+velocity = lambda vel_ori: np.array([v_y * sf_x * np.cos(stims._deg2rad(vel_ori)),
+                                     v_y * sf_y * np.sin(stims._deg2rad(vel_ori))])
 
 # the actual plaids stimulus
-plaid_stims = stims.plaids(win, **stim_params)
-plaid = plaid_stims['amb']
+# plaid_stims = stims.plaids(win, **stim_params)
+plaid = stims.transparent_Plaid(win, **stim_params)
+plaid.phase = np.random.uniform(size=(2,))
 
 # the superimposed RDK
 dots = stims.createDots(
     win,
-    [stim_params['alpha']['amb']]*2, 
+    stim_params['alpha'], 
     stim_params['dc'],
-    nDots=200,
-    I0=1)
-dots.coherence = .1
-dots.dir = 15
-dots_velocity = lambda x: stims.get_angular_velocity(
-    x, stim_params['vel'], stim_params['ori'])
+    nDots=500,
+    I0=stim_params['I0'])
+dots.coherence = 1
+current_dir = None
+dots_velocity = lambda x: min(
+    stims.get_angular_velocity(x, stim_params['vel'], stim_params['ori']),
+    stims.get_angular_velocity(x, stim_params['vel'], -stim_params['ori']))
 
 # the fixation disk
 fix_disk = stims.fixation_disk(win)
@@ -67,38 +76,47 @@ win.flip()
 percepts.waitKeyPress(io, key=' ', timeout=10)
 
 all_percepts = []
-trial_timer = clock.CountdownTimer(start=20)
+trial_timer = clock.CountdownTimer(start=35)
 
 pb = percepts.get_percept_report(io, clear=True)
 current_percept = pb[-1]
 
 new_time = trial_timer.getTime()
-current_dir = 0
 
-
-for s in plaid: s.autoDraw = True
+plaid.autoDraw = True
 dots.autoDraw = True
 for s in fix_disk: s.autoDraw = True
+aperture.enable()
 
 while trial_timer.getTime()>0:
     old_time = new_time
     new_time = trial_timer.getTime()
     
-    if new_time > 15:
+    if new_time > 30:
+        dots.dir = 0
         dots.coherence = 0
+        vel_ori = -90
+    elif new_time > 20:
+        dots.coherence = stim_params['coherence']
+        dots.dir = -90 - stim_params['ori']  # "left"
+        # dots.element.ori = 20
+        # vel_ori = 0  # -90 + stim_params['ori']
     elif new_time > 10:
-        dots.coherence = 1
-        dots.dir = 15
-    elif new_time > 5:
-        dots.dir = -90
+        dots.dir = -90  # "up"
+        # dots.element.ori = 90
+        vel_ori = -90
     else:
-        dots.dir = -165
+        dots.dir = -90 + stim_params['ori']  # "right"
+        # dots.element.ori = 160
+        # vel_ori = -180  # -90 - stim_params['ori']q
+
     if dots.dir != current_dir:
         dots_vel = dots_velocity(dots.dir)
-    current_dir = dots.dir
+        # print(dots.dir, ': ', dots_vel)
+        current_dir = dots.dir
 
-    dots.speed =  dots_vel * (new_time - old_time)  # speed in °/frame
-    plaid[1].phase += velocity * (new_time - old_time)
+    dots.speed = dots_vel * (new_time - old_time)  # speed in °/frame
+    plaid.phase += velocity(vel_ori) * (new_time - old_time)
     win.flip()
 
 pb = percepts.get_percept_report(io)
@@ -108,9 +126,10 @@ print('Trial ended')
 pb = percepts.merge_percepts(pb)
 print(pb)
 
-for s in plaid: s.autoDraw = False
+plaid.autoDraw = False
 dots.autoDraw = False
 for s in fix_disk: s.autoDraw = False
+aperture.disable()
 
 msg = 'Press [q] to quit... '
 print(msg)

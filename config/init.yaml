@@ -48,21 +48,20 @@ experiment:
             test: 14
     # some typical stimulus parameters
     stim:
-        # transparency: floats
-        alpha:
-            amb: 0.3
-            coh: 0.8
-            transp: 0.2
+        # transparency: float or couple of floats (in [0, 1])
+        alpha: 0.1
         # contrast: float ([0, 1])
-        I0: 0.2
-        # dutycycle: int ([0, 1])
+        I0: 0.6
+        # dutycycle: float or couple of floats (in [0, 1])
         dc: 0.35
         # orientation of gratings: float (deg)
-        ori: 15
+        ori: 20
         # velocity: float (deg)
-        vel: 1
+        vel: 2.5
         # spatial frequency: float (s/deg)
-        sf: 0.33333
+        sf: 0.2
+        # dots coherence
+        coherence: .5
 data:
     # path: path str
     # path where the data will be stored
