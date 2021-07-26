@@ -29,6 +29,7 @@ class MarkovRenewalProcess():
             mu = np.full((k, ), 1)
         self.__mu = np.log(mu**2/np.sqrt(sigma**2 + mu**2))
         self.__S2 = np.log(1 + sigma**2/mu**2) + self.__mu**2
+        self.__train_samples = {s: [] for s in states}
         
     @property
     def states(self):
@@ -111,7 +112,7 @@ class MarkovRenewalProcess():
                 self.__comx[self._ix[y[0]], self._ix[x[0]]] += 1
 
         # the number of observations after the update
-        n = self.__comx.sum(axis=0)  # TODO: should this not be axis=0 ???
+        n = self.__comx.sum(axis=0)
 
         # update estimators of first two moments: mu and S2
         for k, v in surv_t.items():
@@ -125,6 +126,43 @@ class MarkovRenewalProcess():
             if n[ix] - m[ix] > 0:
                 self.__mu[ix] = (self.__mu[ix] * m[ix] + np.array(v).sum()) / n[ix]
                 self.__S2[ix] = (self.__S2[ix] * m[ix] + (np.array(v) ** 2).sum()) / n[ix]
+
+
+    def train_with_censored_data(self, X):
+        """ X comes as a list of tuples of (state, duration) or (state, duration, flag)
+        all observations are considered to be contingent in time unless flag is set to False
+        where
+            state: the current state
+            duration: the current residence time in the state
+            flag: True means the state is valid and the duration is a true residence time,
+                  False means that the state is interrupted and the reported time is right-censored
+        right-censored data allows for trials interrupting reporting, but still using the observation time in the estimator
+        """
+        for s in self.states:
+            self.__train_samples[s].extend([x for x in X if x[0]==s])
+        self.__update_estimators()
+        
+
+    def __update_estimators(self):
+        for s in self.states:
+            ix = self._ix[s]
+            x = np.array([rt[1] for rt in self.__train_samples[s] if len(rt)==2 or rt[2]])
+            y = np.array([rt[1] for rt in self.__train_samples[s] if len(rt)==3 and not rt[2]])
+            p = x.size
+            converged = False
+            mu, sigma = 100, 1  # np.exp(self.__mu[ix]), np.sqrt(self.__S2[ix] - self.__mu[ix]**2)  # initialise mu and sigma
+            while not converged and p>0:  # do not update if p is zero
+                Z = lognorm(s=sigma, scale=mu)
+                w = Z.pdf(y) / Z.sf(y)  # weights for the updates
+                mu_ = np.exp(np.mean(np.log(x))+sigma**2/p*np.sum(y*w))
+                sigma_ = np.sqrt(np.sum(np.log(x/mu)**2)/(p-np.sum(np.log(y/mu)*y*w)))
+                if ((mu_ - mu)**2 + (sigma_ - sigma) ** 2)/2 < 1e-3:
+                    converged = True
+                mu, sigma = mu_, sigma_
+
+            self.__mu[ix] = np.log(mu)
+            self.__S2[ix] = sigma**2 + np.log(mu)**2
+
 
     def log_likelihood(self, X, normalise=True):
         """ compute log_likelihood for a list of (state, residence_time)
@@ -183,11 +221,13 @@ class MarkovRenewalProcess():
             t_ += tau
             s = np.random.choice(self.states, p=tm[:, self._ix[s]])
 
-        samples.append((s, t_, None))
+        last_sample = samples[-1]
+        samples[-1] = (last_sample[0], last_sample[1], t - last_sample[1], False)
         return samples
 
 
 if  __name__ == '__main__':
+    from scipy.stats import uniform
     states = ['coherent', 'transparent_left', 'transparent_right']
     mrp_model = MarkovRenewalProcess(states, tm='uniform', mu=np.full((len(states), ), 3.), sigma=np.full((len(states), ), 1.))
     
@@ -197,24 +237,30 @@ if  __name__ == '__main__':
     print('transition matrix = \n{}\n'.format(mrp_model.transition_matrix))
     print('steady state vector = {}\n\n'.format(mrp_model.steady_state))
 
-    samples = [mrp_model.sample(100) for _ in range(10)]
-    # print(samples)
+    for case in ['uncensored', 'censored']:
 
-    mrp = MarkovRenewalProcess(states)
-    mrp_prior = MarkovRenewalProcess(states)
-    for ix, sample in enumerate(samples):
-        print('training phase {i} on {n} extra samples'.format(i=ix+1, n = len(sample)))
-        mrp.train([(s[0], s[2]) for s in sample])
+        samples = [mrp_model.sample(100) for _ in range(10)]
+        # print(samples)
 
-        print('log_likelihood(true model) = {}'.format(
-            mrp_model.log_likelihood([(s[0], s[2]) for s in sample])))
-        print('log_likelihood(trained model) = {}'.format(
-            mrp.log_likelihood([(s[0], s[2]) for s in sample])))
-        print('log_likelihood(prior) = {}'.format(
-            mrp_prior.log_likelihood([(s[0], s[2]) for s in sample])))
-        
-        for k, v in mrp.residence_times.items():
-            print('{}: mean={}, std={}'.format(k, v.stats(moments='m'), np.sqrt(v.stats(moments='v'))))
+        mrp = MarkovRenewalProcess(states)
+        mrp_prior = MarkovRenewalProcess(states)
+        for ix, sample in enumerate(samples):
+            print('training phase {i} on {n} extra samples'.format(i=ix+1, n = len(sample)))
+            
+            if case == 'uncensored':
+                mrp.train([(s[0], s[2]) for s in sample])
+            elif case == 'censored':
+                mrp.train_with_censored_data([(s[0], s[2]) if len(s)<4 else (s[0], s[2], s[3]) for s in sample])
 
-        print('transition matrix = \n{}\n'.format(mrp.transition_matrix))
-        print('steady state vector = {}\n\n'.format(mrp.steady_state))
+            print('log_likelihood(true model) = {}'.format(
+                mrp_model.log_likelihood([(s[0], s[2]) for s in sample])))
+            print('log_likelihood(trained model) = {}'.format(
+                mrp.log_likelihood([(s[0], s[2]) for s in sample])))
+            print('log_likelihood(prior) = {}'.format(
+                mrp_prior.log_likelihood([(s[0], s[2]) for s in sample])))
+            
+            for k, v in mrp.residence_times.items():
+                print('{}: mean={}, std={}'.format(k, v.stats(moments='m'), np.sqrt(v.stats(moments='v'))))
+
+            print('transition matrix = \n{}\n'.format(mrp.transition_matrix))
+            print('steady state vector = {}\n\n'.format(mrp.steady_state))
