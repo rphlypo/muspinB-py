@@ -102,14 +102,10 @@ class MarkovRenewalProcess():
         # the number of observations we already had
         m = self.__comx.sum(axis=0)  # TODO: should this not be axis=0 ???
 
-        # get the current and next states together as x and y
-        for x, y in zip(X[:-1], X[1:]):  
+        self.__update_tm(X)
+        for x in X:
             if x[1] is not None:
-                # only if the current state has a duration will we look at
-                # - current residence time
-                # - transition to next state
                 surv_t[x[0]].append(np.log(x[1]))
-                self.__comx[self._ix[y[0]], self._ix[x[0]]] += 1
 
         # the number of observations after the update
         n = self.__comx.sum(axis=0)
@@ -141,7 +137,17 @@ class MarkovRenewalProcess():
         for s in self.states:
             self.__train_samples[s].extend([x for x in X if x[0]==s])
         self.__update_estimators()
+        self.__update_tm(X)
         
+
+    def __update_tm(self, X):
+        # get the current and next states together as x and y
+        for x, y in zip(X[:-1], X[1:]):  
+            if x[1] is not None:
+                # only if the current state has a duration will we look at
+                # - current residence time
+                # - transition to next state
+                self.__comx[self._ix[y[0]], self._ix[x[0]]] += 1
 
     def __update_estimators(self):
         for s in self.states:
