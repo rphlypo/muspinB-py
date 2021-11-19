@@ -228,7 +228,7 @@ class MarkovRenewalProcess():
             s = np.random.choice(self.states, p=tm[:, self._ix[s]])
 
         last_sample = samples[-1]
-        samples[-1] = (last_sample[0], last_sample[1], t - last_sample[1], False)
+        samples[-1] = (last_sample[0], last_sample[1], None)
         return samples
 
 
@@ -256,7 +256,7 @@ if  __name__ == '__main__':
             if case == 'uncensored':
                 mrp.train([(s[0], s[2]) for s in sample])
             elif case == 'censored':
-                mrp.train_with_censored_data([(s[0], s[2]) if len(s)<4 else (s[0], s[2], s[3]) for s in sample])
+                mrp.train_with_censored_data([(s[0], s[2]) if s[2] else (s[0], s[2], s[3]) for s in sample])
 
             print('log_likelihood(true model) = {}'.format(
                 mrp_model.log_likelihood([(s[0], s[2]) for s in sample])))
